@@ -122,7 +122,11 @@ jobs:
         run: |
           nohup "$ANDROID_HOME/emulator/emulator"             -avd soberania-ci             -no-window             -noaudio             -no-boot-anim             -no-snapshot             -gpu swiftshader_indirect             -camera-back none             -camera-front none             > emulator.log 2>&1 &
 
-          adb wait-for-device
+          if ! timeout 120 adb wait-for-device; then
+            echo "Emulator did not appear in ADB within 120 seconds."
+            cat emulator.log
+            exit 1
+          fi
 
           for attempt in $(seq 1 120); do
             if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; then
