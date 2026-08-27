@@ -6,12 +6,13 @@ Este arquivo registra componentes de terceiros utilizados ou planejados pelo Sob
 
 ## WireGuard — wireguard-go
 
-**Status:** planejado; ainda não empacotado.
+**Status:** dependência fixada do módulo nativo de laboratório; ainda não empacotada no APK.
 
 - Projeto: `WireGuard/wireguard-go`
 - Módulo: `golang.zx2c4.com/wireguard`
 - Licença: MIT
 - Uso pretendido: motor userspace do transporte rápido / Nível 1
+- Versão de laboratório fixada: `v0.0.0-20250521234502-f333402bd9cb`
 - Política: não modificar primitivas criptográficas; fixar versão/commit no build
 
 Copyright e licença permanecem pertencentes aos respectivos autores upstream.
