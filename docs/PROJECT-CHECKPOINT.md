@@ -120,11 +120,23 @@ Always-On permanece desativado durante M0 pelo mesmo motivo.
 
 ## Código arquitetural já criado
 
+### Transporte e política
+
 - `TransportMode.kt`
 - `TransportKind.kt`
 - `TransportState.kt`
 - `TransportBackend.kt`
 - `ProtectionProfile.kt`
+
+### Caminho da TUN
+
+- `TunHandle.kt`
+- `PacketRouter.kt`
+- `PacketRouterState.kt`
+- `DataPath.kt`
+- `docs/PACKET-ROUTER.md`
+
+O `SoberaniaVpnService` mantém ownership do descritor TUN original. Consumidores futuros devem receber duplicatas através de `TunHandle.duplicate()`.
 
 `TransportKind` distingue:
 
@@ -152,9 +164,9 @@ Não fazer MITM de TLS para tentar controlar cookies de Chrome.
 
 ## Próximos passos técnicos
 
-1. Criar contrato do Packet Router.
-2. Definir ownership/duplicação segura do file descriptor TUN.
-3. Separar data path de pacote de data path de stream.
+1. Implementar o primeiro Packet Router de laboratório.
+2. Exercitar uma duplicata real da TUN sem transferir ownership do descritor original.
+3. Escolher e auditar a ponte TUN → stream para o caminho Onion.
 4. Testar ida/volta em laboratório.
 5. Integrar primeiro backend real.
 6. Só depois habilitar rotas default.
