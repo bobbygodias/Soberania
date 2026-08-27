@@ -10,8 +10,6 @@ import java.io.Closeable
  * - o SoberaniaVpnService mantém o handle original;
  * - consumidores recebem descritores duplicados;
  * - cada consumidor fecha somente a sua própria duplicata.
- *
- * Isso evita transferência implícita de ownership entre Kotlin, bridges e JNI.
  */
 class TunHandle(
     private val descriptor: ParcelFileDescriptor
@@ -21,13 +19,24 @@ class TunHandle(
     private var closed = false
 
     /**
-     * Cria uma nova referência para o mesmo descritor de arquivo do kernel.
-     * O chamador passa a ser responsável por fechar a duplicata.
+     * Duplicata simples para consumidores que mantêm o PFD em Kotlin/Java.
      */
     @Synchronized
     fun duplicate(): ParcelFileDescriptor {
         check(!closed) { "TUN handle is closed" }
         return ParcelFileDescriptor.dup(descriptor.fileDescriptor)
+    }
+
+    /**
+     * Duplicata com ownership explícito para backends que podem transferir
+     * o FD para código nativo.
+     */
+    @Synchronized
+    fun duplicateOwned(): OwnedTunDescriptor {
+        check(!closed) { "TUN handle is closed" }
+        return OwnedTunDescriptor(
+            ParcelFileDescriptor.dup(descriptor.fileDescriptor)
+        )
     }
 
     @Synchronized
