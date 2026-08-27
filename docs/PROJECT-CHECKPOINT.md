@@ -111,11 +111,18 @@ Já existe:
 - projeto Android/Kotlin;
 - Android VpnService;
 - interface TUN de laboratório IPv4/IPv6;
+- ownership explícito da TUN original via `TunHandle`;
+- sonda `TunLabProbe` operando sobre uma duplicata do descritor;
+- contadores de laboratório apenas em RAM;
+- gerador determinístico de pacotes UDP de teste para IPv4 e IPv6 reservados;
+- botão de teste no M0;
 - notificação foreground;
 - ciclo de criação/destruição do túnel;
 - zero SDK de analytics;
 - nenhuma interceptação HTTPS;
 - rotas apenas de documentação/teste.
+
+**Ainda não foi validado build/execução em dispositivo físico nesta etapa; portanto M0 não está concluído.**
 
 M0 deliberadamente não instala `0.0.0.0/0` nem `::/0` enquanto não existir um motor de encaminhamento real.
 
@@ -137,7 +144,11 @@ Always-On permanece desativado durante M0 pelo mesmo motivo.
 - `PacketRouter.kt`
 - `PacketRouterState.kt`
 - `DataPath.kt`
+- `TunLabProbe.kt`
+- `TunLabCounters.kt`
+- `TunLabPacketSender.kt`
 - `docs/PACKET-ROUTER.md`
+- `docs/CHECKPOINT-POLICY.md`
 
 O `SoberaniaVpnService` mantém ownership do descritor TUN original. Consumidores futuros devem receber duplicatas através de `TunHandle.duplicate()`.
 
@@ -195,15 +206,17 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
-1. Implementar o primeiro Packet Router de laboratório.
-2. Exercitar uma duplicata real da TUN sem transferir ownership do descritor original.
-3. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-4. Testar ida/volta em laboratório.
-5. Integrar primeiro backend real.
-6. Só depois habilitar rotas default.
-7. Posteriormente integrar Arti/Rust/JNI.
-8. Depois Browser Shield.
-9. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
+1. Validar compilação do M0.
+2. Instalar em dispositivo físico e confirmar autorização `VpnService`.
+3. Confirmar que `TunLabProbe` observa pacotes IPv4/IPv6 reservados.
+4. Confirmar repetidamente lifecycle e ownership dos descritores.
+5. Implementar o primeiro `PacketRouter` real de laboratório.
+6. Escolher e auditar a ponte TUN → stream para o caminho Onion.
+7. Integrar primeiro backend real.
+8. Só depois habilitar rotas default.
+9. Posteriormente integrar Arti/Rust/JNI.
+10. Depois Browser Shield.
+11. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
 
 ## Questões ainda abertas
 
@@ -214,6 +227,14 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 - política de atualização;
 - distribuição de relays caso haja infraestrutura própria;
 - CI de Android: tentativa de adicionar workflow pelo conector foi bloqueada; ainda não considerar CI configurado.
+
+## Política de checkpoint
+
+A política formal está em `docs/CHECKPOINT-POLICY.md`.
+
+Criar/atualizar checkpoint quando houver marco técnico, mudança arquitetural, escolha crítica, alteração de threat model, sessão longa com avanço substancial ou antes de etapa de alto risco.
+
+Checkpoints devem distinguir claramente entre **implementado**, **em laboratório**, **planejado**, **em avaliação**, **bloqueado** e **não implementado**.
 
 ## Regra de continuidade
 
