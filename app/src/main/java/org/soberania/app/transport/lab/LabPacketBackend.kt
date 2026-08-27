@@ -2,6 +2,7 @@ package org.soberania.app.transport.lab
 
 import android.os.ParcelFileDescriptor
 import org.soberania.app.packet.IpPacketInspector
+import org.soberania.app.packet.OwnedTun
 import org.soberania.app.packet.OwnedTunDescriptor
 import org.soberania.app.packet.lab.TunLabCounters
 import org.soberania.app.transport.PacketTunnelBackend
@@ -15,10 +16,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Backend de pacote exclusivamente para M0.
  *
- * Ele imita a relação de ownership de um backend real:
- * recebe uma duplicata da TUN, passa a ser dono dela e lê os pacotes.
- *
- * Não cria socket externo, não criptografa e não alcança a Internet.
+ * O laboratório precisa do ParcelFileDescriptor Android para usar
+ * AutoCloseInputStream. O contrato público do PacketTunnelBackend, porém,
+ * permanece baseado em OwnedTun para ser testável fora do Android.
  */
 class LabPacketBackend : PacketTunnelBackend {
 
@@ -39,7 +39,7 @@ class LabPacketBackend : PacketTunnelBackend {
 
     @Synchronized
     override fun start(
-        tun: OwnedTunDescriptor,
+        tun: OwnedTun,
         runtime: TransportRuntime
     ): TransportState {
         if (running.get()) {
@@ -50,8 +50,14 @@ class LabPacketBackend : PacketTunnelBackend {
         currentState = TransportState.Starting
         TunLabCounters.reset()
 
+        val androidTun = tun as? OwnedTunDescriptor
+            ?: run {
+                tun.close()
+                return fail("Backend LAB exige descritor Android")
+            }
+
         val stream = try {
-            val pfd = tun.takeParcelFileDescriptor()
+            val pfd = androidTun.takeParcelFileDescriptor()
             ParcelFileDescriptor.AutoCloseInputStream(pfd)
         } catch (exception: Exception) {
             tun.close()
