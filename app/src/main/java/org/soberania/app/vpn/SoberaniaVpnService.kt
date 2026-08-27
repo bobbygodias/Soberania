@@ -7,13 +7,17 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
-import android.os.ParcelFileDescriptor
 import org.soberania.app.MainActivity
 import org.soberania.app.R
+import org.soberania.app.packet.TunHandle
 
 class SoberaniaVpnService : VpnService() {
 
-    private var tunInterface: ParcelFileDescriptor? = null
+    /**
+     * O serviço é o dono do descritor original da TUN.
+     * Outros componentes devem receber apenas duplicatas via TunHandle.
+     */
+    private var tunHandle: TunHandle? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -55,7 +59,7 @@ class SoberaniaVpnService : VpnService() {
          * This proves the Android VpnService lifecycle without pretending that
          * traffic is protected before the transport engine exists.
          */
-        tunInterface = Builder()
+        val descriptor = Builder()
             .setSession(getString(R.string.app_name))
             .setMtu(1500)
             .addAddress("10.77.0.1", 32)
@@ -64,7 +68,8 @@ class SoberaniaVpnService : VpnService() {
             .addRoute("2001:db8::", 32)
             .establish()
 
-        isRunning = tunInterface != null
+        tunHandle = descriptor?.let(::TunHandle)
+        isRunning = tunHandle != null
 
         if (!isRunning) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -87,8 +92,8 @@ class SoberaniaVpnService : VpnService() {
 
     private fun closeTun() {
         isRunning = false
-        runCatching { tunInterface?.close() }
-        tunInterface = null
+        runCatching { tunHandle?.close() }
+        tunHandle = null
     }
 
     private fun buildNotification(): Notification {
