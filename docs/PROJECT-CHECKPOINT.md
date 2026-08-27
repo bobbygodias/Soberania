@@ -125,7 +125,7 @@ Já existe:
 - nenhuma interceptação HTTPS;
 - rotas apenas de documentação/teste.
 
-**O build Android Debug já foi validado com sucesso no GitHub Actions. Ainda falta instalar/testar em dispositivo físico; portanto M0 ainda não está concluído.**
+**O build Android Debug foi validado no GitHub Actions e o M0 já foi executado em dispositivo físico. O Android autorizou o VpnService, o PacketRouter observou tráfego IPv4/IPv6 de laboratório e os contadores cresceram sem pacotes desconhecidos. Ainda falta validar repetidamente start/stop e confirmar que a rede comum permanece intacta; portanto M0 ainda não está concluído.**
 
 M0 deliberadamente não instala `0.0.0.0/0` nem `::/0` enquanto não existir um motor de encaminhamento real.
 
@@ -247,14 +247,14 @@ Inputs congelados para o laboratório:
 - NDK `28.2.13676358`;
 - Android API nativa mínima 26.
 
-O workflow `.github/workflows/wireguard-native-ci.yml` compila o módulo nativo isolado para `arm64-v8a`.
+O workflow `.github/workflows/wireguard-native-ci.yml` compila o módulo nativo isolado para `arm64-v8a` e `x86_64`.
 
 Validações aprovadas:
 
 - `go mod verify`;
 - build Go `c-shared`;
 - build/link do JNI shim;
-- ELF aarch64 válido;
+- ELF arm64 e x86_64 válidos;
 - dependência dinâmica do JNI shim para `libsoberania-wireguard-go.so` confirmada.
 
 ### Variante Android WireGuard LAB
@@ -268,7 +268,10 @@ M0 normal
 
 wireguardLab
 └── applicationId org.soberania.app.wireguardlab
-    └── arm64-v8a
+    ├── arm64-v8a
+    │   ├── libsoberania-wg.so
+    │   └── libsoberania-wireguard-go.so
+    └── x86_64
         ├── libsoberania-wg.so
         └── libsoberania-wireguard-go.so
 ```
@@ -293,14 +296,14 @@ Workflow: `.github/workflows/android-wireguard-lab-ci.yml`.
 
 Pipeline aprovado:
 
-1. compila WireGuard arm64;
-2. faz staging das duas bibliotecas;
+1. compila WireGuard arm64-v8a e x86_64;
+2. faz staging das duas bibliotecas em ambas as ABIs;
 3. executa os testes JVM compartilhados;
 4. executa `:app:assembleWireguardLab`;
-5. abre o APK e confirma as duas bibliotecas em `lib/arm64-v8a/`;
-6. publica o artefato `soberania-wireguard-lab-arm64`.
+5. abre o APK e confirma as bibliotecas em `lib/arm64-v8a/` e `lib/x86_64/`;
+6. publica o artefato WireGuard LAB multi-ABI.
 
-O APK WireGuard LAB foi produzido com sucesso. **Ainda falta validar no aparelho se o linker Android consegue carregar JNI + Go e retornar a versão.**
+O APK WireGuard LAB foi produzido com sucesso. **Em dispositivo físico ARM64, o linker Android carregou JNI + Go e o diagnóstico retornou `v0.0.0-20250521234502-f333402bd9cb`, exatamente a revisão pinada. Essa prova é passiva: nenhum peer, rota, DNS ou túnel WireGuard real foi iniciado.**
 
 ### Ownership testável
 
@@ -370,15 +373,12 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
-1. Instalar o APK M0 em dispositivo físico e confirmar autorização `VpnService`.
-2. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
-3. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
-4. Validar no aparelho que o M0 pode iniciar/parar repetidamente sem afetar a rede comum.
-5. Instalar a variante `wireguardLab` e confirmar que o diagnóstico passivo carrega JNI + Go e retorna versão.
-6. Criar teste Android real de ownership do FD na ponte nativa.
-7. Endurecer a semântica de retorno dos sockets nativos para distinguir “socket ainda não aberto” de erro real.
-8. Testar `protectSocket()` antes de qualquer rota default.
-9. Testar peer WireGuard de laboratório sem rota default global.
+1. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend no M0 físico.
+2. Validar no aparelho que o M0 pode iniciar/parar repetidamente sem afetar a rede comum.
+3. Criar teste Android real de ownership do FD na ponte nativa.
+4. Adicionar smoke test Android x86_64 de carga JNI + Go no CI.
+5. Testar `protectSocket()` antes de qualquer rota default.
+6. Testar peer WireGuard de laboratório sem rota default global.
 10. Escolher e auditar a ponte TUN → stream para o caminho Onion.
 11. Só depois habilitar rotas default.
 12. Posteriormente integrar Arti/Rust/JNI.
