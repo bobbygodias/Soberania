@@ -75,7 +75,7 @@ class MainActivity : Activity() {
             setOnClickListener {
                 if (SoberaniaVpnService.isRunning) {
                     stopService(Intent(this@MainActivity, SoberaniaVpnService::class.java))
-                    refreshUi()
+                    status.postDelayed({ refreshUi() }, LAB_REFRESH_DELAY_MS)
                 } else {
                     requestVpnPermission()
                 }
@@ -93,7 +93,6 @@ class MainActivity : Activity() {
                     TunLabPacketSender.send()
 
                     runOnUiThread {
-                        // Pequeno atraso para dar tempo à thread de leitura da TUN.
                         labTest.postDelayed({
                             refreshUi()
                         }, LAB_REFRESH_DELAY_MS)
@@ -145,8 +144,6 @@ class MainActivity : Activity() {
             startService(intent)
         }
 
-        // startForegroundService é assíncrono; atualiza novamente após o serviço
-        // ter oportunidade de estabelecer a TUN e iniciar a sonda.
         status.postDelayed({ refreshUi() }, LAB_REFRESH_DELAY_MS)
     }
 
@@ -157,7 +154,9 @@ class MainActivity : Activity() {
             status.text = if (snapshot.running) {
                 getString(
                     R.string.status_tun_probe,
-                    snapshot.packets,
+                    snapshot.ipv4Packets,
+                    snapshot.ipv6Packets,
+                    snapshot.unknownPackets,
                     snapshot.bytes
                 )
             } else {
