@@ -43,6 +43,9 @@ Maximizar, dentro dos limites técnicos reais, o controle individual sobre:
 13. Não tratar dispositivo/SO já comprometido como recuperável por magia.
 14. Browser Shield é uma camada separada da camada de rede.
 15. Firefox/GeckoView permitem integração profunda; Chrome/Chromium Android recebe proteção de rede, mas não deve ser anunciado como tendo a mesma integração web.
+16. Comunicação de Emergência é um recurso opcional completamente separado dos níveis de proteção.
+17. Comunicação de Emergência não promete anonimato, confidencialidade fim a fim nem ocultação da identidade de rádio.
+18. O rótulo "emergência" descreve o caso de uso e não deve ser tratado como isenção regulatória automática.
 
 ## Níveis de proteção — nomes de interface
 
@@ -161,6 +164,34 @@ Integrações prioritárias:
 2. GeckoView opcional integrado ao Soberania.
 
 Não fazer MITM de TLS para tentar controlar cookies de Chrome.
+
+## Comunicação de Emergência — recurso separado
+
+Foi decidido que a funcionalidade RoIP/rádio não pertence à matriz Nível 1/2/3/4.
+
+Arquitetura:
+
+```text
+Soberania
+├── Proteção digital
+│   └── Níveis 1 / 2 / 3 / 4
+└── Comunicação de Emergência
+    └── RoIP -> gateway/refletor -> RF
+```
+
+Regras congeladas:
+
+- sem selo de "protegido" ou "anônimo" na tela de PTT;
+- pode expor indicativo, Radio ID, destino, horário e outros metadados;
+- smartphone sem hardware RF não transmite VHF/UHF sozinho;
+- o recurso depende de caminho IP até gateway/refletor ou de hardware externo;
+- M17/Codec2 é a prioridade inicial;
+- AllStar/IAX2 e EchoLink/SvxLink ficam como fases posteriores;
+- zero telemetria e nenhuma gravação automática continuam válidos;
+- `VoiceProtectionCompatibility.kt` foi removido para eliminar acoplamento com `ProtectionProfile`;
+- documentação canônica: `docs/EMERGENCY-COMMS.md`.
+
+Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
