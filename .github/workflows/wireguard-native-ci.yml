@@ -1,0 +1,65 @@
+name: WireGuard Native CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "native/wireguard/**"
+      - "app/src/main/java/org/soberania/app/transport/wireguard/**"
+      - ".github/workflows/wireguard-native-ci.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "native/wireguard/**"
+      - "app/src/main/java/org/soberania/app/transport/wireguard/**"
+      - ".github/workflows/wireguard-native-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  arm64:
+    name: Build arm64-v8a adapter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24.3
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24.3"
+          cache: false
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install pinned NDK
+        run: sdkmanager "ndk;28.2.13676358"
+
+      - name: Verify modules
+        working-directory: native/wireguard
+        run: go mod verify
+
+      - name: Build arm64-v8a
+        working-directory: native/wireguard
+        run: make build-arm64
+
+      - name: Inspect ELF
+        working-directory: native/wireguard
+        run: |
+          file build/arm64-v8a/libsoberania-wireguard-go.so
+          file build/arm64-v8a/libsoberania-wg.so
+          readelf -d build/arm64-v8a/libsoberania-wg.so | grep NEEDED
+
+      - name: Upload native laboratory artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: soberania-wireguard-native-arm64-lab
+          path: |
+            native/wireguard/build/arm64-v8a/libsoberania-wireguard-go.so
+            native/wireguard/build/arm64-v8a/libsoberania-wireguard-go.h
+            native/wireguard/build/arm64-v8a/libsoberania-wg.so
+          if-no-files-found: error
