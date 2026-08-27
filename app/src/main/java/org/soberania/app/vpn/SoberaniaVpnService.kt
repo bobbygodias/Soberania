@@ -10,6 +10,7 @@ import android.os.Build
 import org.soberania.app.MainActivity
 import org.soberania.app.R
 import org.soberania.app.packet.TunHandle
+import org.soberania.app.packet.lab.TunLabProbe
 
 class SoberaniaVpnService : VpnService() {
 
@@ -18,6 +19,12 @@ class SoberaniaVpnService : VpnService() {
      * Outros componentes devem receber apenas duplicatas via TunHandle.
      */
     private var tunHandle: TunHandle? = null
+
+    /**
+     * Sonda exclusivamente de laboratório M0.
+     * Lê somente uma duplicata da TUN e não encaminha tráfego.
+     */
+    private val labProbe = TunLabProbe()
 
     override fun onCreate() {
         super.onCreate()
@@ -74,7 +81,10 @@ class SoberaniaVpnService : VpnService() {
         if (!isRunning) {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            return
         }
+
+        tunHandle?.let { labProbe.start(it) }
     }
 
     private fun stopTunnel() {
@@ -92,6 +102,11 @@ class SoberaniaVpnService : VpnService() {
 
     private fun closeTun() {
         isRunning = false
+
+        // Consumidores fecham primeiro suas duplicatas.
+        runCatching { labProbe.close() }
+
+        // O serviço fecha por último o descritor TUN original.
         runCatching { tunHandle?.close() }
         tunHandle = null
     }
