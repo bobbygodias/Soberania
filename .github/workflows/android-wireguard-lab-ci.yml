@@ -97,6 +97,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      ANDROID_AVD_HOME: ${{ runner.temp }}/android-avd
 
     steps:
       - name: Set up Android SDK
@@ -108,7 +110,13 @@ jobs:
 
       - name: Create AVD
         run: |
+          mkdir -p "$ANDROID_AVD_HOME"
+
           echo "no" | avdmanager create avd             --force             --name soberania-ci             --package "system-images;android-35;default;x86_64"
+
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
+          avdmanager list avd
+          find "$ANDROID_AVD_HOME" -maxdepth 2 -type f -print | sort
 
       - name: Enable KVM
         run: |
