@@ -125,7 +125,7 @@ Já existe:
 - nenhuma interceptação HTTPS;
 - rotas apenas de documentação/teste.
 
-**O build Android Debug foi validado no GitHub Actions e o M0 já foi executado em dispositivo físico. O Android autorizou o VpnService, o PacketRouter observou tráfego IPv4/IPv6 de laboratório e os contadores cresceram sem pacotes desconhecidos. Ainda falta validar repetidamente start/stop e confirmar que a rede comum permanece intacta; portanto M0 ainda não está concluído.**
+**M0 CONCLUÍDO em 2026-08-27.** O build Android Debug foi validado no GitHub Actions e o M0 passou em dispositivo físico: autorização oficial do `VpnService`, criação da TUN, observação de tráfego IPv4/IPv6 reservado, contadores sem pacotes desconhecidos e múltiplos ciclos de start/stop sem perda da rede comum.
 
 M0 deliberadamente não instala `0.0.0.0/0` nem `::/0` enquanto não existir um motor de encaminhamento real.
 
@@ -373,17 +373,17 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
-1. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend no M0 físico.
-2. Validar no aparelho que o M0 pode iniciar/parar repetidamente sem afetar a rede comum.
-3. Criar teste Android real de ownership do FD na ponte nativa.
-4. Adicionar smoke test Android x86_64 de carga JNI + Go no CI.
-5. Testar `protectSocket()` antes de qualquer rota default.
-6. Testar peer WireGuard de laboratório sem rota default global.
-10. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-11. Só depois habilitar rotas default.
-12. Posteriormente integrar Arti/Rust/JNI.
-13. Depois Browser Shield.
-14. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
+1. Criar teste Android real de ownership do FD na ponte nativa.
+2. Adicionar smoke test Android x86_64 de carga JNI + Go no CI.
+3. Ligar a TUN real ao `WireGuardPacketBackend` apenas em variante LAB.
+4. Testar `protectSocket()` fail-closed antes de qualquer rota default.
+5. Testar peer WireGuard de laboratório sem rota default global.
+6. Provar ida/volta e teardown sem vazamento.
+7. Só então avaliar rotas reais IPv4/IPv6 e DNS pelo túnel.
+8. Escolher e auditar a ponte TUN → stream para o caminho Onion.
+9. Posteriormente integrar Arti/Rust/JNI.
+10. Depois Browser Shield.
+11. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
 
 ## Questões ainda abertas
 
@@ -403,6 +403,28 @@ A política formal está em `docs/CHECKPOINT-POLICY.md`.
 Criar/atualizar checkpoint quando houver marco técnico, mudança arquitetural, escolha crítica, alteração de threat model, sessão longa com avanço substancial ou antes de etapa de alto risco.
 
 Checkpoints devem distinguir claramente entre **implementado**, **em laboratório**, **planejado**, **em avaliação**, **bloqueado** e **não implementado**.
+
+## Marco físico — 2026-08-27
+
+O M0 foi validado no aparelho físico.
+
+Observado:
+
+- autorização do Android para o `VpnService`;
+- TUN ativa;
+- IPv4 e IPv6 chegando ao `LabPacketBackend`;
+- contadores crescendo sem pacotes desconhecidos;
+- múltiplos ciclos criar → testar → encerrar → recriar;
+- rede comum permaneceu funcional após os ciclos.
+
+O WireGuard LAB também foi validado passivamente no mesmo dispositivo:
+
+```text
+Motor WireGuard nativo: disponível
+upstream v0.0.0-20250521234502-f333402bd9cb
+```
+
+Isso prova carregamento Android linker → JNI → Go → wireguard-go, mas **não** prova ainda túnel WireGuard operacional.
 
 ## Regra de continuidade
 
