@@ -55,17 +55,17 @@ WebView / outros apps ──────┘
 
 ## Modos planejados
 
-### Rápido
+### Nível 1 — Proteção
 Proteção de rede com baixo impacto de latência para uso cotidiano.
 
-### Reforçado
+### Nível 2 — Reforçada
 Encaminhamento por mais de um ponto, aumentando isolamento sem o custo completo de uma rede onion.
 
-### Anônimo
+### Nível 3 — Anônima
 Roteamento por cebola. A direção preferencial é usar **Arti**, a implementação moderna do Tor em Rust, integrada como backend separado.
 
-### Paranoico
-Paranoico não é um quarto protocolo. É um perfil que combina o modo Onion com kill switch obrigatório, DNS apenas pelo túnel, proteção IPv4/IPv6, sessão web descartável, zero logs persistentes e Browser Shield quando compatível.
+### Nível 4 — Máxima
+Não é um quarto protocolo. É um perfil que combina o modo Onion com kill switch obrigatório, DNS apenas pelo túnel, proteção IPv4/IPv6, sessão web descartável, zero logs persistentes e Browser Shield quando compatível.
 
 Veja [docs/TRANSPORTS.md](docs/TRANSPORTS.md).
 
@@ -87,7 +87,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [ ] **M3 — Onion / Arti:** modo de anonimato
 - [ ] **M4 — Browser Shield:** integração Firefox
 - [ ] **M5 — Sessões descartáveis**
-- [ ] **M6 — Modo Paranoico**
+- [ ] **M6 — Proteção Máxima**
 - [ ] **M7 — Navegação integrada com GeckoView**
 - [ ] **M8 — Builds reproduzíveis e auditoria independente**
 
@@ -96,6 +96,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Modelo de ameaça](docs/THREAT-MODEL.md)
 - [Transportes e integração Arti](docs/TRANSPORTS.md)
+- [Checkpoint do projeto](docs/PROJECT-CHECKPOINT.md)
 - [M0 — Coração](docs/M0.md)
 - [Política de segurança](SECURITY.md)
 
