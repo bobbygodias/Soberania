@@ -2,7 +2,6 @@ package org.soberania.app.packet.lab
 
 import android.os.ParcelFileDescriptor
 import org.soberania.app.packet.IpPacketInspector
-import org.soberania.app.packet.IpVersion
 import org.soberania.app.packet.PacketRouter
 import org.soberania.app.packet.PacketRouterState
 import org.soberania.app.packet.TunHandle
@@ -10,7 +9,6 @@ import org.soberania.app.transport.TransportBackend
 import java.io.Closeable
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Primeiro PacketRouter executável do projeto.
@@ -27,11 +25,6 @@ class LabPacketRouter : PacketRouter, Closeable {
 
     private val running = AtomicBoolean(false)
 
-    private val ipv4Packets = AtomicLong(0)
-    private val ipv6Packets = AtomicLong(0)
-    private val unknownPackets = AtomicLong(0)
-    private val totalBytes = AtomicLong(0)
-
     @Volatile
     private var currentState: PacketRouterState = PacketRouterState.Detached
 
@@ -40,15 +33,6 @@ class LabPacketRouter : PacketRouter, Closeable {
 
     @Volatile
     private var worker: Thread? = null
-
-    data class Snapshot(
-        val running: Boolean,
-        val state: PacketRouterState,
-        val ipv4Packets: Long,
-        val ipv6Packets: Long,
-        val unknownPackets: Long,
-        val totalBytes: Long
-    )
 
     @Synchronized
     override fun attach(
@@ -69,11 +53,12 @@ class LabPacketRouter : PacketRouter, Closeable {
 
         val path = PacketRouter.requiredPathFor(backend)
 
-        resetCounters()
+        TunLabCounters.reset()
 
         val stream = ParcelFileDescriptor.AutoCloseInputStream(duplicate)
         input = stream
         running.set(true)
+        TunLabCounters.markRunning(true)
         currentState = PacketRouterState.Attached(path)
 
         worker = Thread({
@@ -91,19 +76,15 @@ class LabPacketRouter : PacketRouter, Closeable {
                         continue
                     }
 
-                    totalBytes.addAndGet(count.toLong())
-
-                    when (IpPacketInspector.version(buffer, count)) {
-                        IpVersion.IPV4 -> ipv4Packets.incrementAndGet()
-                        IpVersion.IPV6 -> ipv6Packets.incrementAndGet()
-                        IpVersion.UNKNOWN -> unknownPackets.incrementAndGet()
-                    }
+                    val version = IpPacketInspector.version(buffer, count)
+                    TunLabCounters.record(version, count)
                 }
             } catch (_: IOException) {
                 // Fechar a duplicata para interromper read() durante detach()
                 // é comportamento normal.
             } finally {
                 running.set(false)
+                TunLabCounters.markRunning(false)
                 runCatching { stream.close() }
 
                 if (currentState !is PacketRouterState.Failed) {
@@ -121,6 +102,7 @@ class LabPacketRouter : PacketRouter, Closeable {
     @Synchronized
     override fun detach() {
         running.set(false)
+        TunLabCounters.markRunning(false)
 
         runCatching { input?.close() }
         input = null
@@ -135,27 +117,12 @@ class LabPacketRouter : PacketRouter, Closeable {
 
     override fun state(): PacketRouterState = currentState
 
-    fun snapshot(): Snapshot =
-        Snapshot(
-            running = running.get(),
-            state = currentState,
-            ipv4Packets = ipv4Packets.get(),
-            ipv6Packets = ipv6Packets.get(),
-            unknownPackets = unknownPackets.get(),
-            totalBytes = totalBytes.get()
-        )
-
     override fun close() = detach()
-
-    private fun resetCounters() {
-        ipv4Packets.set(0)
-        ipv6Packets.set(0)
-        unknownPackets.set(0)
-        totalBytes.set(0)
-    }
 
     private fun fail(reason: String): PacketRouterState {
         running.set(false)
+        TunLabCounters.markRunning(false)
+
         val failed = PacketRouterState.Failed(reason)
         currentState = failed
         return failed
