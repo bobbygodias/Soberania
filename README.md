@@ -109,6 +109,9 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [Modelo de ameaça](docs/THREAT-MODEL.md)
 - [Transportes e integração Arti](docs/TRANSPORTS.md)
 - [Nível 1 — transporte rápido](docs/LEVEL1-TRANSPORT.md)
+- [WireGuard — integração nativa](docs/WIREGUARD-NATIVE-INTEGRATION.md)
+- [Licenciamento](docs/LICENSING.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Checkpoint do projeto](docs/PROJECT-CHECKPOINT.md)
 - [Política de checkpoints](docs/CHECKPOINT-POLICY.md)
 - [Comunicação de Emergência](docs/EMERGENCY-COMMS.md)
@@ -118,6 +121,8 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 ## Estado atual
 
 Projeto em início de desenvolvimento. **Ainda não existe release estável.**
+
+O APK de laboratório M0 já compila automaticamente no GitHub Actions, mas ainda não representa proteção real de tráfego.
 
 Não utilize versões de desenvolvimento para situações em que falhas de privacidade possam colocar alguém em risco.
 
