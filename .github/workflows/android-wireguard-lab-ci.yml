@@ -97,10 +97,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      ANDROID_AVD_HOME: ${{ runner.temp }}/android-avd
 
     steps:
+      - name: Pin AVD home
+        run: |
+          echo "ANDROID_AVD_HOME=$RUNNER_TEMP/android-avd" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/android-avd"
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
