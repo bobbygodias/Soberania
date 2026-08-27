@@ -198,3 +198,42 @@ Teste JVM não substitui teste de FD real no Android.
 4. testar `protectSocket()` fail-closed;
 5. só então testar um peer WireGuard de laboratório;
 6. continuar sem rota default até ida/volta e fail-closed estarem validados.
+
+
+## Android x86_64 smoke
+
+O WireGuard LAB possui agora smoke test automático em emulador Android x86_64.
+
+O teste usa uma Activity exclusiva do source set `wireguardLab` e não estabelece VPN real.
+
+Ele:
+
+1. carrega JNI + Go;
+2. confirma a revisão upstream pinada;
+3. cria um `ParcelFileDescriptor` Android real;
+4. duplica o descritor;
+5. transfere ownership da duplicata ao motor nativo;
+6. envia deliberadamente um FD que não é TUN;
+7. espera `turnOn() == -2`;
+8. confirma por `fcntl(F_GETFD)` que a duplicata foi fechada;
+9. confirma que o descritor original continua vivo.
+
+Resultado canônico:
+
+```text
+before=true
+result=-2
+after=false
+originalAlive=true
+```
+
+Isso cobre a fronteira de ownership em Android real, complementando os testes JVM.
+
+Ainda não cobre:
+
+- TUN real entregue ao WireGuard;
+- socket protection real;
+- peer;
+- rota;
+- DNS;
+- tráfego protegido.
