@@ -109,6 +109,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [Modelo de ameaça](docs/THREAT-MODEL.md)
 - [Transportes e integração Arti](docs/TRANSPORTS.md)
 - [Checkpoint do projeto](docs/PROJECT-CHECKPOINT.md)
+- [Política de checkpoints](docs/CHECKPOINT-POLICY.md)
 - [Comunicação de Emergência](docs/EMERGENCY-COMMS.md)
 - [M0 — Coração](docs/M0.md)
 - [Política de segurança](SECURITY.md)
