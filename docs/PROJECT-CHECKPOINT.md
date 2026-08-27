@@ -112,7 +112,10 @@ Já existe:
 - Android VpnService;
 - interface TUN de laboratório IPv4/IPv6;
 - ownership explícito da TUN original via `TunHandle`;
-- sonda `TunLabProbe` operando sobre uma duplicata do descritor;
+- `LabPacketRouter` executável;
+- `LabPacketBackend` implementando `PacketTunnelBackend`;
+- duplicata da TUN com ownership explícito via `OwnedTunDescriptor`;
+- classificação mínima de IPv4/IPv6 via `IpPacketInspector`;
 - contadores de laboratório apenas em RAM;
 - gerador determinístico de pacotes UDP de teste para IPv4 e IPv6 reservados;
 - botão de teste no M0;
@@ -144,13 +147,25 @@ Always-On permanece desativado durante M0 pelo mesmo motivo.
 - `PacketRouter.kt`
 - `PacketRouterState.kt`
 - `DataPath.kt`
-- `TunLabProbe.kt`
+- `IpVersion.kt`
+- `IpPacketInspector.kt`
+- `OwnedTunDescriptor.kt`
+- `LabPacketRouter.kt`
+- `LabPacketBackend.kt`
 - `TunLabCounters.kt`
 - `TunLabPacketSender.kt`
+- `PacketTunnelBackend.kt`
+- `StreamProxyBackend.kt`
+- `TransportRuntime.kt`
+- `VpnTransportRuntime.kt`
 - `docs/PACKET-ROUTER.md`
 - `docs/CHECKPOINT-POLICY.md`
 
-O `SoberaniaVpnService` mantém ownership do descritor TUN original. Consumidores futuros devem receber duplicatas através de `TunHandle.duplicate()`.
+O `SoberaniaVpnService` mantém ownership do descritor TUN original.
+
+Para `PACKET_TUNNEL`, o router usa `TunHandle.duplicateOwned()` e transfere ownership da duplicata ao `PacketTunnelBackend`. O backend fecha essa duplicata, inclusive em caso de falha.
+
+Para `STREAM_PROXY`, o backend não recebe a TUN diretamente; uma futura Stream Bridge consumirá a duplicata e converterá IP em streams.
 
 `TransportKind` distingue:
 
@@ -158,6 +173,31 @@ O `SoberaniaVpnService` mantém ownership do descritor TUN original. Consumidore
 - `STREAM_PROXY`
 
 Isso existe porque backends como Arti exigem uma ponte TUN → stream.
+
+## Nível 1 — backend real em avaliação
+
+Candidato principal: WireGuard.
+
+Pesquisa do código oficial confirmou que o backend userspace Android:
+
+- entrega o FD da TUN ao wireguard-go;
+- usa sockets de transporte que precisam ser excluídos da própria VPN;
+- protege esses sockets com `VpnService.protect()`;
+- o backend oficial padrão também cria seu próprio `VpnService`/TUN.
+
+Consequência: o Soberania não deve instanciar cegamente um segundo backend que queira possuir outro `VpnService`.
+
+Foi criada a fronteira:
+
+```text
+TUN original -> duplicateOwned() -> PacketRouter -> PacketTunnelBackend
+```
+
+e um `TransportRuntime` restrito que expõe apenas `protectSocket(fd)`.
+
+Nenhuma dependência WireGuard foi adicionada ainda. Não usar reflexão, hacks de FD ou segundo VpnService concorrente.
+
+Documento: `docs/LEVEL1-TRANSPORT.md`.
 
 ## Browser Shield planejado
 
@@ -208,11 +248,11 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 1. Validar compilação do M0.
 2. Instalar em dispositivo físico e confirmar autorização `VpnService`.
-3. Confirmar que `TunLabProbe` observa pacotes IPv4/IPv6 reservados.
-4. Confirmar repetidamente lifecycle e ownership dos descritores.
-5. Implementar o primeiro `PacketRouter` real de laboratório.
-6. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-7. Integrar primeiro backend real.
+3. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
+4. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
+5. Avaliar a integração estável do primeiro backend real do Nível 1.
+6. Testar `protectSocket()` antes de qualquer rota default.
+7. Escolher e auditar a ponte TUN → stream para o caminho Onion.
 8. Só depois habilitar rotas default.
 9. Posteriormente integrar Arti/Rust/JNI.
 10. Depois Browser Shield.
@@ -221,7 +261,7 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 ## Questões ainda abertas
 
 - licença final do código: o repositório atualmente contém LICENSE CC0 1.0; revisar conscientemente antes de release;
-- backend concreto do Nível 1;
+- forma suportável de integrar WireGuard/wireguard-go preservando a TUN única;
 - implementação de multi-hop;
 - escolha da ponte TUN → stream;
 - política de atualização;
