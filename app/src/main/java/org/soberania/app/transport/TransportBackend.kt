@@ -3,19 +3,20 @@ package org.soberania.app.transport
 /**
  * Contrato comum para motores de transporte do Soberania.
  *
- * O VpnService não deve conhecer detalhes de WireGuard, multi-hop ou Arti.
+ * O método de inicialização é deliberadamente definido nos subtipos:
  *
- * Atenção: nem todo backend consome pacotes IP diretamente. Backends do tipo
- * STREAM_PROXY, como o caminho Onion/Arti planejado, precisam de uma ponte
- * entre a TUN e conexões/streams.
+ * - PacketTunnelBackend recebe uma duplicata da TUN;
+ * - StreamProxyBackend recebe somente o runtime, enquanto uma StreamBridge
+ *   separada trata a TUN.
+ *
+ * Isso impede que um backend de pacote e um backend de stream finjam ter a
+ * mesma relação com o caminho de dados.
  */
 interface TransportBackend {
 
     val mode: TransportMode
 
     val kind: TransportKind
-
-    fun start(): TransportState
 
     fun stop()
 
