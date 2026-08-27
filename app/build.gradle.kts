@@ -24,12 +24,6 @@ android {
             applicationIdSuffix = ".wireguardlab"
             versionNameSuffix = "-wireguard-lab"
             isDebuggable = true
-
-            /*
-             * Permite instalar o laboratório nativo ao lado do M0 normal.
-             * O nome diferente reduz a chance de confundir as builds.
-             */
-            resValue("string", "app_name", "Soberania WireGuard LAB")
         }
     }
 
