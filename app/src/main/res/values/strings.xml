@@ -4,6 +4,9 @@
     <string name="motto">Porque soberania e liberdade jamais serão negociáveis.</string>
     <string name="status_idle">M0 laboratório — proteção ainda não está ativa.</string>
     <string name="status_tun">M0 laboratório — interface TUN criada. O tráfego real ainda não está protegido.</string>
+    <string name="status_tun_probe">M0 laboratório — TUN e sonda ativas. Pacotes de teste observados: %1$d · bytes: %2$d. O tráfego real ainda não está protegido.</string>
+    <string name="status_tun_probe_unavailable">M0 laboratório — TUN criada, mas a sonda de teste não está ativa. O tráfego real ainda não está protegido.</string>
     <string name="activate_lab">Criar túnel de laboratório</string>
     <string name="stop_lab">Encerrar túnel</string>
+    <string name="send_lab_packet">Enviar pacotes de teste IPv4/IPv6</string>
 </resources>
