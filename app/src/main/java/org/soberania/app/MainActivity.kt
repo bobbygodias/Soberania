@@ -12,12 +12,15 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextView
+import org.soberania.app.packet.lab.TunLabCounters
+import org.soberania.app.packet.lab.TunLabPacketSender
 import org.soberania.app.vpn.SoberaniaVpnService
 
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
     private lateinit var action: Button
+    private lateinit var labTest: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +82,26 @@ class MainActivity : Activity() {
             }
         }
 
+        labTest = Button(this).apply {
+            text = getString(R.string.send_lab_packet)
+            isEnabled = false
+
+            setOnClickListener {
+                isEnabled = false
+
+                Thread({
+                    TunLabPacketSender.send()
+
+                    runOnUiThread {
+                        // Pequeno atraso para dar tempo à thread de leitura da TUN.
+                        labTest.postDelayed({
+                            refreshUi()
+                        }, LAB_REFRESH_DELAY_MS)
+                    }
+                }, "Soberania-M0-TestSender").start()
+            }
+        }
+
         root.addView(title)
         root.addView(space(20))
         root.addView(motto)
@@ -86,6 +109,8 @@ class MainActivity : Activity() {
         root.addView(status)
         root.addView(space(32))
         root.addView(action)
+        root.addView(space(16))
+        root.addView(labTest)
 
         return root
     }
@@ -120,16 +145,31 @@ class MainActivity : Activity() {
             startService(intent)
         }
 
-        refreshUi()
+        // startForegroundService é assíncrono; atualiza novamente após o serviço
+        // ter oportunidade de estabelecer a TUN e iniciar a sonda.
+        status.postDelayed({ refreshUi() }, LAB_REFRESH_DELAY_MS)
     }
 
     private fun refreshUi() {
         if (SoberaniaVpnService.isRunning) {
-            status.setText(R.string.status_tun)
+            val snapshot = TunLabCounters.snapshot()
+
+            status.text = if (snapshot.running) {
+                getString(
+                    R.string.status_tun_probe,
+                    snapshot.packets,
+                    snapshot.bytes
+                )
+            } else {
+                getString(R.string.status_tun_probe_unavailable)
+            }
+
             action.setText(R.string.stop_lab)
+            labTest.isEnabled = snapshot.running
         } else {
             status.setText(R.string.status_idle)
             action.setText(R.string.activate_lab)
+            labTest.isEnabled = false
         }
     }
 
@@ -145,5 +185,6 @@ class MainActivity : Activity() {
     companion object {
         private const val REQUEST_VPN = 1001
         private const val REQUEST_NOTIFICATIONS = 1002
+        private const val LAB_REFRESH_DELAY_MS = 250L
     }
 }
