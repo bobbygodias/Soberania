@@ -149,6 +149,7 @@ Always-On permanece desativado durante M0 pelo mesmo motivo.
 - `DataPath.kt`
 - `IpVersion.kt`
 - `IpPacketInspector.kt`
+- `OwnedTun.kt`
 - `OwnedTunDescriptor.kt`
 - `LabPacketRouter.kt`
 - `LabPacketBackend.kt`
