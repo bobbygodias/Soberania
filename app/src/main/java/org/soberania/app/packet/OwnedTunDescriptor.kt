@@ -1,29 +1,23 @@
 package org.soberania.app.packet
 
 import android.os.ParcelFileDescriptor
-import java.io.Closeable
 
 /**
- * Uma duplicata da TUN com ownership explícito.
+ * Implementação Android de uma duplicata da TUN com ownership explícito.
  *
- * Este objeto pertence a exatamente um consumidor. O consumidor pode:
- *
- * - fechar a duplicata normalmente; ou
- * - transferir o FD bruto para código nativo através de detachRawFd().
- *
- * Em nenhum caso este objeto representa o descritor TUN original mantido
- * pelo SoberaniaVpnService.
+ * Este objeto pertence a exatamente um consumidor.
  */
 class OwnedTunDescriptor internal constructor(
     descriptor: ParcelFileDescriptor
-) : Closeable {
+) : OwnedTun {
 
     private var descriptor: ParcelFileDescriptor? = descriptor
 
     /**
      * Transfere ownership do ParcelFileDescriptor ao chamador.
      *
-     * Após esta chamada, close() deste wrapper não fecha mais o PFD retornado.
+     * Usado apenas por consumidores Android que precisam do PFD em vez do
+     * número bruto do FD.
      */
     @Synchronized
     fun takeParcelFileDescriptor(): ParcelFileDescriptor {
@@ -33,13 +27,8 @@ class OwnedTunDescriptor internal constructor(
         return owned
     }
 
-    /**
-     * Transfere ownership do FD bruto ao chamador/código nativo.
-     *
-     * O receptor passa a ser responsável por fechar o FD.
-     */
     @Synchronized
-    fun detachRawFd(): Int {
+    override fun detachRawFd(): Int {
         val owned = takeParcelFileDescriptor()
         return owned.detachFd()
     }
@@ -52,5 +41,5 @@ class OwnedTunDescriptor internal constructor(
     }
 
     @Synchronized
-    fun hasOwnership(): Boolean = descriptor != null
+    override fun hasOwnership(): Boolean = descriptor != null
 }
