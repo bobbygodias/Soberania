@@ -125,7 +125,7 @@ Já existe:
 - nenhuma interceptação HTTPS;
 - rotas apenas de documentação/teste.
 
-**Ainda não foi validado build/execução em dispositivo físico nesta etapa; portanto M0 não está concluído.**
+**O build Android Debug já foi validado com sucesso no GitHub Actions. Ainda falta instalar/testar em dispositivo físico; portanto M0 ainda não está concluído.**
 
 M0 deliberadamente não instala `0.0.0.0/0` nem `::/0` enquanto não existir um motor de encaminhamento real.
 
@@ -195,9 +195,33 @@ TUN original -> duplicateOwned() -> PacketRouter -> PacketTunnelBackend
 
 e um `TransportRuntime` restrito que expõe apenas `protectSocket(fd)`.
 
-Nenhuma dependência WireGuard foi adicionada ainda. Não usar reflexão, hacks de FD ou segundo VpnService concorrente.
+A direção de integração foi refinada: criar um adaptador Go/JNI mínimo do Soberania que importe `wireguard-go` upstream, em vez de usar `GoBackend` ou manter um fork grande.
 
-Documento: `docs/LEVEL1-TRANSPORT.md`.
+`WireGuardNativeEngine` e `WireGuardPacketBackend` já existem como fronteira Kotlin, mas o motor nativo ainda não está empacotado.
+
+Não usar reflexão, hacks de FD ou segundo VpnService concorrente.
+
+Documentos:
+- `docs/LEVEL1-TRANSPORT.md`
+- `docs/WIREGUARD-NATIVE-INTEGRATION.md`
+- `docs/LICENSING.md`
+- `THIRD_PARTY_NOTICES.md`.
+
+## Build / CI
+
+GitHub Actions está ativo em `.github/workflows/android-ci.yml`.
+
+Estado atual:
+
+- Android API 36 instalado no runner;
+- JDK 17;
+- Gradle 9.5.0;
+- AGP 9.3.0;
+- Kotlin integrado do AGP 9;
+- `:app:assembleDebug` passou com sucesso;
+- artefato `soberania-m0-debug` é gerado pelo workflow.
+
+O primeiro build falhou porque o projeto ainda aplicava `org.jetbrains.kotlin.android`. AGP 9 usa Kotlin integrado; o plugin e `kotlinOptions.jvmTarget` foram removidos. O build seguinte passou.
 
 ## Browser Shield planejado
 
@@ -246,27 +270,29 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
-1. Validar compilação do M0.
-2. Instalar em dispositivo físico e confirmar autorização `VpnService`.
-3. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
-4. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
-5. Avaliar a integração estável do primeiro backend real do Nível 1.
+1. Instalar o APK M0 em dispositivo físico e confirmar autorização `VpnService`.
+2. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
+3. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
+4. Criar adaptador Go/JNI mínimo para `wireguard-go` upstream.
+5. Fixar versão/commit do motor e toolchain no build reproduzível.
 6. Testar `protectSocket()` antes de qualquer rota default.
-7. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-8. Só depois habilitar rotas default.
-9. Posteriormente integrar Arti/Rust/JNI.
-10. Depois Browser Shield.
-11. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
+7. Testar peer WireGuard de laboratório sem rota default global.
+8. Escolher e auditar a ponte TUN → stream para o caminho Onion.
+9. Só depois habilitar rotas default.
+10. Posteriormente integrar Arti/Rust/JNI.
+11. Depois Browser Shield.
+12. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
 
 ## Questões ainda abertas
 
 - licença final do código: o repositório atualmente contém LICENSE CC0 1.0; revisar conscientemente antes de release;
-- forma suportável de integrar WireGuard/wireguard-go preservando a TUN única;
+- detalhes finais do build Go/NDK do adaptador WireGuard mínimo;
+- geração/armazenamento seguro de chaves WireGuard;
 - implementação de multi-hop;
 - escolha da ponte TUN → stream;
 - política de atualização;
 - distribuição de relays caso haja infraestrutura própria;
-- CI de Android: tentativa de adicionar workflow pelo conector foi bloqueada; ainda não considerar CI configurado.
+- política de assinatura/release do APK ainda não definida.
 
 ## Política de checkpoint
 
