@@ -6,7 +6,7 @@ on:
     paths:
       - "app/**"
       - "native/wireguard/**"
-      - "scripts/stage-wireguard-lab-arm64.sh"
+      - "scripts/stage-wireguard-lab.sh"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "gradle.properties"
@@ -16,7 +16,7 @@ on:
     paths:
       - "app/**"
       - "native/wireguard/**"
-      - "scripts/stage-wireguard-lab-arm64.sh"
+      - "scripts/stage-wireguard-lab.sh"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "gradle.properties"
@@ -58,12 +58,12 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Build native WireGuard arm64-v8a
+      - name: Build native WireGuard ABIs
         working-directory: native/wireguard
-        run: make build-arm64
+        run: make build-all
 
       - name: Stage JNI libraries for WireGuard LAB
-        run: bash scripts/stage-wireguard-lab-arm64.sh
+        run: bash scripts/stage-wireguard-lab.sh
 
       - name: Run backend JVM unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
@@ -76,12 +76,14 @@ jobs:
           APK="$(find app/build/outputs/apk/wireguardLab -name '*.apk' -type f | head -n 1)"
           test -n "$APK"
           echo "Inspecting $APK"
-          unzip -l "$APK" | grep 'lib/arm64-v8a/libsoberania-wireguard-go.so'
-          unzip -l "$APK" | grep 'lib/arm64-v8a/libsoberania-wg.so'
+          for abi in arm64-v8a x86_64; do
+            unzip -l "$APK" | grep "lib/$abi/libsoberania-wireguard-go.so"
+            unzip -l "$APK" | grep "lib/$abi/libsoberania-wg.so"
+          done
 
       - name: Upload WireGuard LAB APK
         uses: actions/upload-artifact@v4
         with:
-          name: soberania-wireguard-lab-arm64
+          name: soberania-wireguard-lab-arm64-x86_64
           path: app/build/outputs/apk/wireguardLab/*.apk
           if-no-files-found: error
