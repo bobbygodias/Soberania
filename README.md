@@ -122,7 +122,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 
 Projeto em início de desenvolvimento. **Ainda não existe release estável.**
 
-O APK de laboratório M0 já compila automaticamente no GitHub Actions, mas ainda não representa proteção real de tráfego.
+O APK M0 e uma variante isolada `wireguardLab` já compilam automaticamente no GitHub Actions. A variante LAB empacota o motor WireGuard arm64 e faz apenas diagnóstico passivo de carga/versão; nenhuma das builds representa ainda proteção real de tráfego.
 
 Não utilize versões de desenvolvimento para situações em que falhas de privacidade possam colocar alguém em risco.
 
