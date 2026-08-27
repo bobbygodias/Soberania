@@ -43,6 +43,21 @@ wireguard-go upstream (MIT)
 
 Não modificar primitivas criptográficas.
 
+### wgctrl / wgtypes
+
+O repositório `WireGuard/wgctrl-go` utiliza licença **MIT**.
+
+O pacote `wgtypes` expõe APIs públicas para operações de chave, incluindo geração de chave privada, parsing e derivação da chave pública.
+
+Direção:
+
+- preferir `wgtypes` a copiar pequenas rotinas criptográficas para o Soberania;
+- fixar versão/commit antes de adicionar a dependência;
+- revisar a árvore de módulos resultante;
+- registrar a versão efetiva em `THIRD_PARTY_NOTICES.md`.
+
+Enquanto isso não acontecer, `wgctrl-go` permanece apenas como candidato estudado e não como dependência efetiva.
+
 ### wireguard-android
 
 O código de integração Android estudado no `WireGuard/wireguard-android` utiliza **Apache-2.0**.
