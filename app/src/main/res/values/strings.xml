@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Soberania</string>
+    <string name="motto">Porque soberania e liberdade jamais serão negociáveis.</string>
+    <string name="status_idle">M0 laboratório — proteção ainda não está ativa.</string>
+    <string name="status_tun">M0 laboratório — interface TUN criada. O tráfego real ainda não está protegido.</string>
+    <string name="activate_lab">Criar túnel de laboratório</string>
+    <string name="stop_lab">Encerrar túnel</string>
+</resources>
