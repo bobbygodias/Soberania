@@ -118,7 +118,7 @@ Se um socket existente não puder ser protegido, o backend deve derrubar o motor
 
 ## Ownership do FD
 
-`WireGuardPacketBackend` recebe um `OwnedTunDescriptor`.
+`WireGuardPacketBackend` recebe a interface `OwnedTun`. A implementação Android é `OwnedTunDescriptor`.
 
 Antes de transferir ownership:
 
@@ -163,15 +163,38 @@ Direção:
 
 A política está em `docs/LICENSING.md` e `THIRD_PARTY_NOTICES.md`.
 
+## Estado de integração em APK
+
+O APK M0 normal continua sem bibliotecas WireGuard empacotadas.
+
+Existe uma variante separada `wireguardLab` que:
+
+- usa `applicationIdSuffix = ".wireguardlab"`;
+- empacota somente `arm64-v8a` nesta etapa;
+- contém `libsoberania-wg.so` e `libsoberania-wireguard-go.so`;
+- expõe apenas um diagnóstico passivo de carga/versão;
+- não ativa peer, rotas, DNS ou transporte WireGuard.
+
+O CI `.github/workflows/android-wireguard-lab-ci.yml` confirmou build, testes JVM e presença das duas bibliotecas dentro do APK.
+
+## Testes de contrato
+
+`OwnedTun` torna o ownership testável no JVM.
+
+Há cobertura automática para:
+
+- engine indisponível;
+- transferência de ownership ao engine;
+- falha de socket protection;
+- lifecycle Ready → Stopped sem double turnOff.
+
+Teste JVM não substitui teste de FD real no Android.
+
 ## Próxima implementação
 
-1. criar módulo nativo isolado;
-2. fixar versões de Go e `wireguard-go`;
-3. criar adaptador Go mínimo;
-4. criar JNI mínimo para `WireGuardNativeEngine`;
-5. adicionar build NDK/Go reproduzível;
-6. compilar no CI para ABIs Android suportadas;
-7. testar ownership de FD;
-8. testar `protectSocket()`;
-9. só então testar um peer WireGuard de laboratório;
-10. ainda sem rota default até ida/volta e fail-closed estarem validados.
+1. validar no aparelho o carregamento JNI + Go e a versão;
+2. criar teste Android real de ownership do FD;
+3. separar semanticamente “socket não aberto” de erro de lookup nativo;
+4. testar `protectSocket()` fail-closed;
+5. só então testar um peer WireGuard de laboratório;
+6. continuar sem rota default até ida/volta e fail-closed estarem validados.
