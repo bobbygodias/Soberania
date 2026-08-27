@@ -3,32 +3,38 @@ package org.soberania.app.policy
 import org.soberania.app.transport.TransportMode
 
 /**
- * Perfis descrevem políticas.
+ * Perfis descrevem políticas de proteção.
  *
- * Eles não implementam criptografia nem transporte por conta própria.
+ * "Nível" é linguagem de interface. O transporte continua sendo uma
+ * implementação técnica separada.
  */
 sealed class ProtectionProfile(
+    val level: Int,
     val label: String,
     val transport: TransportMode
 ) {
 
     data object Standard : ProtectionProfile(
-        label = "Padrão",
+        level = 1,
+        label = "Proteção",
         transport = TransportMode.FAST
     )
 
     data object Reinforced : ProtectionProfile(
-        label = "Reforçado",
+        level = 2,
+        label = "Reforçada",
         transport = TransportMode.MULTI_HOP
     )
 
     data object Anonymous : ProtectionProfile(
-        label = "Anônimo",
+        level = 3,
+        label = "Anônima",
         transport = TransportMode.ONION
     )
 
-    data object Paranoid : ProtectionProfile(
-        label = "Paranoico",
+    data object Maximum : ProtectionProfile(
+        level = 4,
+        label = "Máxima",
         transport = TransportMode.ONION
     ) {
         const val REQUIRE_KILL_SWITCH = true
@@ -38,4 +44,6 @@ sealed class ProtectionProfile(
         const val REQUIRE_EPHEMERAL_WEB_SESSION = true
         const val REQUIRE_ZERO_PERSISTENT_LOGS = true
     }
+
+    fun displayName(): String = "Nível $level — $label"
 }
