@@ -3,8 +3,20 @@ name: Android CI
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/android-ci.yml"
   pull_request:
     branches: [ "main" ]
+    paths:
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/android-ci.yml"
   workflow_dispatch:
 
 permissions:
