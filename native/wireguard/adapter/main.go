@@ -37,6 +37,7 @@ func soberaniaWgTurnOn(
     settings *C.char,
 ) C.int {
     fd := int(tunFD)
+
     if fd < 0 || settings == nil {
         if fd >= 0 {
             _ = unix.Close(fd)
@@ -46,14 +47,22 @@ func soberaniaWgTurnOn(
 
     tunDevice, _, err := tun.CreateUnmonitoredTUNFromFD(fd)
     if err != nil {
-        // CreateUnmonitoredTUNFromFD recebe o FD, mas em caminhos de erro
-        // anteriores à criação completa não há Device que possamos fechar.
+        /*
+         * Nesta falha ainda não temos um Device completo que possa assumir
+         * o teardown. O FD já pertence ao adaptador, então fechamos aqui.
+         */
         _ = unix.Close(fd)
         return -2
     }
 
-    // Privacidade por padrão: nada de log verboso do motor.
-    logger := device.NewLogger(device.LogLevelSilent, "Soberania/WireGuard")
+    /*
+     * Zero telemetria e zero histórico por padrão:
+     * o logger interno do motor permanece silencioso.
+     */
+    logger := device.NewLogger(
+        device.LogLevelSilent,
+        "Soberania/WireGuard",
+    )
 
     wgDevice := device.NewDevice(
         tunDevice,
@@ -73,15 +82,11 @@ func soberaniaWgTurnOn(
         return -4
     }
 
-    handle := allocateHandle()
+    handle := registerDevice(wgDevice)
     if handle < 0 {
         wgDevice.Close()
         return -5
     }
-
-    registry.Lock()
-    registry.tunnels[handle] = runningTunnel{device: wgDevice}
-    registry.Unlock()
 
     return C.int(handle)
 }
@@ -170,7 +175,11 @@ func lookupDevice(handle int32) *device.Device {
     return tunnel.device
 }
 
-func allocateHandle() int32 {
+/*
+ * Aloca E registra o handle sob o mesmo lock.
+ * Isso evita que dois starts concorrentes recebam o mesmo número.
+ */
+func registerDevice(wgDevice *device.Device) int32 {
     registry.Lock()
     defer registry.Unlock()
 
@@ -188,9 +197,15 @@ func allocateHandle() int32 {
             continue
         }
 
-        if _, exists := registry.tunnels[candidate]; !exists {
-            return candidate
+        if _, exists := registry.tunnels[candidate]; exists {
+            continue
         }
+
+        registry.tunnels[candidate] = runningTunnel{
+            device: wgDevice,
+        }
+
+        return candidate
     }
 
     return -1
