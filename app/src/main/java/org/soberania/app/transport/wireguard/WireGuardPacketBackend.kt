@@ -1,6 +1,6 @@
 package org.soberania.app.transport.wireguard
 
-import org.soberania.app.packet.OwnedTunDescriptor
+import org.soberania.app.packet.OwnedTun
 import org.soberania.app.transport.PacketTunnelBackend
 import org.soberania.app.transport.TransportKind
 import org.soberania.app.transport.TransportMode
@@ -9,8 +9,6 @@ import org.soberania.app.transport.TransportState
 
 /**
  * Backend WireGuard do Nível 1.
- *
- * Estado atual: arquitetura pronta, motor nativo ainda não conectado.
  *
  * O backend recebe ownership de uma DUPLICATA da TUN. O descritor original
  * continua pertencendo ao SoberaniaVpnService.
@@ -32,7 +30,7 @@ class WireGuardPacketBackend(
 
     @Synchronized
     override fun start(
-        tun: OwnedTunDescriptor,
+        tun: OwnedTun,
         runtime: TransportRuntime
     ): TransportState {
         if (handle != NO_HANDLE) {
@@ -48,11 +46,6 @@ class WireGuardPacketBackend(
         }
 
         val rawFd = try {
-            /*
-             * Ownership passa ao motor nativo.
-             * O contrato do engine exige fechamento do FD em qualquer saída
-             * de turnOn(): sucesso, código negativo ou exceção.
-             */
             tun.detachRawFd()
         } catch (exception: Exception) {
             tun.close()
@@ -63,6 +56,10 @@ class WireGuardPacketBackend(
         }
 
         val newHandle = try {
+            /*
+             * A partir desta chamada o engine possui rawFd e deve fechá-lo
+             * em qualquer resultado: sucesso, código negativo ou exceção.
+             */
             engine.turnOn(
                 interfaceName = config.interfaceName,
                 tunFd = rawFd,
@@ -92,7 +89,9 @@ class WireGuardPacketBackend(
         )
 
         if (!protectedV4 || !protectedV6) {
-            engine.turnOff(newHandle)
+            runCatching {
+                engine.turnOff(newHandle)
+            }
             handle = NO_HANDLE
             return fail("Falha ao proteger sockets do transporte WireGuard")
         }
@@ -108,7 +107,6 @@ class WireGuardPacketBackend(
     @Synchronized
     override fun stop() {
         val currentHandle = handle
-
         handle = NO_HANDLE
 
         if (currentHandle != NO_HANDLE) {
