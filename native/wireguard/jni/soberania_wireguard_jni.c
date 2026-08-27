@@ -6,6 +6,8 @@
  */
 
 #include <jni.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -132,4 +134,33 @@ Java_org_soberania_app_transport_wireguard_JniWireGuardNativeEngine_nativeVersio
     jstring result = (*env)->NewStringUTF(env, version);
     free(version);
     return result;
+}
+
+
+/*
+ * LAB-only FD probe.
+ *
+ * O símbolo só é chamado por uma classe presente no source set wireguardLab.
+ * Não transfere ownership e não fecha o descritor.
+ */
+JNIEXPORT jboolean JNICALL
+Java_org_soberania_app_transport_wireguard_lab_LabNativeFdProbe_nativeIsFdOpen(
+        JNIEnv *env,
+        jobject self,
+        jint fd) {
+    (void) env;
+    (void) self;
+
+    if (fd < 0) {
+        return JNI_FALSE;
+    }
+
+    errno = 0;
+    int result = fcntl((int) fd, F_GETFD);
+
+    if (result >= 0) {
+        return JNI_TRUE;
+    }
+
+    return errno == EBADF ? JNI_FALSE : JNI_TRUE;
 }
