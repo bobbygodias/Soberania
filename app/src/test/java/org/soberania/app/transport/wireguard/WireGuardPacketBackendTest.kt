@@ -48,6 +48,31 @@ class WireGuardPacketBackendTest {
     }
 
     @Test
+    fun negativeSocketLookupFailsClosedWithoutProtectCall() {
+        val tun = FakeOwnedTun(fd = 45)
+        val engine = FakeEngine(
+            turnOnResult = 11,
+            socketV4Fd = 120,
+            socketV6Fd = WireGuardNativeEngine.SOCKET_LOOKUP_ERROR
+        )
+        val protected = mutableListOf<Int>()
+        val backend = WireGuardPacketBackend(config, engine)
+
+        val state = backend.start(
+            tun,
+            TransportRuntime { fd ->
+                protected += fd
+                true
+            }
+        )
+
+        assertTrue(state is TransportState.Failed)
+        assertTrue(protected.isEmpty())
+        assertEquals(1, engine.turnOffCalls)
+        assertEquals(11, engine.lastTurnedOffHandle)
+    }
+
+    @Test
     fun protectFailureStopsNativeTunnelFailClosed() {
         val tun = FakeOwnedTun(fd = 43)
         val engine = FakeEngine(
@@ -128,8 +153,8 @@ class WireGuardPacketBackendTest {
     private class FakeEngine(
         private val available: Boolean = true,
         val turnOnResult: Int = 1,
-        private val socketV4Fd: Int = -1,
-        private val socketV6Fd: Int = -1
+        private val socketV4Fd: Int = WireGuardNativeEngine.SOCKET_LOOKUP_ERROR,
+        private val socketV6Fd: Int = WireGuardNativeEngine.SOCKET_LOOKUP_ERROR
     ) : WireGuardNativeEngine {
 
         var turnOnCalls = 0
