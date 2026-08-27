@@ -44,8 +44,9 @@ WebView / outros apps ──────┘
 │  • proteção de fingerprint  │
 │                             │
 │  Transporte                 │
-│  • modo rápido              │
-│  • modo anônimo / Tor       │
+│  • Rápido                   │
+│  • Reforçado / Multi-hop    │
+│  • Onion / Arti             │
 └──────────────┬──────────────┘
                │
                ▼
@@ -54,14 +55,23 @@ WebView / outros apps ──────┘
 
 ## Modos planejados
 
-### Proteção padrão
-Rede protegida com baixo impacto de latência e proteção contra vazamentos.
+### Rápido
+Proteção de rede com baixo impacto de latência para uso cotidiano.
 
-### Navegação protegida
+### Reforçado
+Encaminhamento por mais de um ponto, aumentando isolamento sem o custo completo de uma rede onion.
+
+### Anônimo
+Roteamento por cebola. A direção preferencial é usar **Arti**, a implementação moderna do Tor em Rust, integrada como backend separado.
+
+### Paranoico
+Paranoico não é um quarto protocolo. É um perfil que combina o modo Onion com kill switch obrigatório, DNS apenas pelo túnel, proteção IPv4/IPv6, sessão web descartável, zero logs persistentes e Browser Shield quando compatível.
+
+Veja [docs/TRANSPORTS.md](docs/TRANSPORTS.md).
+
+## Navegação protegida
+
 Integração opcional com navegador compatível para reduzir rastreamento por cookies, storage, trackers e fingerprinting.
-
-### Modo Paranoico
-Perfil de proteção máxima, priorizando anonimato e isolamento sobre conveniência e desempenho.
 
 ## O que Soberania não promete
 
@@ -74,12 +84,20 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [ ] **M0 — Coração:** APK, VpnService, TUN, IPv4/IPv6, DNS e estado real de proteção
 - [ ] **M1 — Transporte rápido:** backend seguro e auditável
 - [ ] **M2 — Anti-leak:** DNS, IPv6 e políticas de queda
-- [ ] **M3 — Tor:** modo de anonimato
+- [ ] **M3 — Onion / Arti:** modo de anonimato
 - [ ] **M4 — Browser Shield:** integração Firefox
 - [ ] **M5 — Sessões descartáveis**
 - [ ] **M6 — Modo Paranoico**
 - [ ] **M7 — Navegação integrada com GeckoView**
 - [ ] **M8 — Builds reproduzíveis e auditoria independente**
+
+## Documentação
+
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Modelo de ameaça](docs/THREAT-MODEL.md)
+- [Transportes e integração Arti](docs/TRANSPORTS.md)
+- [M0 — Coração](docs/M0.md)
+- [Política de segurança](SECURITY.md)
 
 ## Estado atual
 
