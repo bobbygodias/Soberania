@@ -42,11 +42,16 @@ class WireGuardPacketBackend(
 
         currentState = TransportState.Starting
 
+        if (!engine.isAvailable()) {
+            tun.close()
+            return fail("Motor WireGuard nativo indisponível")
+        }
+
         val rawFd = try {
             /*
              * Ownership passa ao motor nativo.
-             * Se turnOn() falhar, o contrato da implementação nativa deve
-             * garantir fechamento do FD recebido.
+             * O contrato do engine exige fechamento do FD em qualquer saída
+             * de turnOn(): sucesso, código negativo ou exceção.
              */
             tun.detachRawFd()
         } catch (exception: Exception) {
