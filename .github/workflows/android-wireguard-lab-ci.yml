@@ -87,3 +87,75 @@ jobs:
           name: soberania-wireguard-lab-arm64-x86_64
           path: app/build/outputs/apk/wireguardLab/*.apk
           if-no-files-found: error
+
+  emulator-smoke:
+    name: x86_64 Android native smoke
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install emulator and x86_64 system image
+        run: |
+          sdkmanager             "platform-tools"             "emulator"             "system-images;android-35;default;x86_64"
+
+      - name: Create AVD
+        run: |
+          echo "no" | avdmanager create avd             --force             --name soberania-ci             --package "system-images;android-35;default;x86_64"
+
+      - name: Enable KVM
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+          fi
+
+      - name: Download WireGuard LAB APK
+        uses: actions/download-artifact@v4
+        with:
+          name: soberania-wireguard-lab-arm64-x86_64
+          path: lab-apk
+
+      - name: Boot emulator
+        run: |
+          nohup "$ANDROID_HOME/emulator/emulator"             -avd soberania-ci             -no-window             -noaudio             -no-boot-anim             -no-snapshot             -gpu swiftshader_indirect             -camera-back none             -camera-front none             > emulator.log 2>&1 &
+
+          adb wait-for-device
+
+          for attempt in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; then
+              break
+            fi
+
+            if [ "$attempt" = "120" ]; then
+              cat emulator.log
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          adb shell input keyevent 82 || true
+
+      - name: Install LAB APK
+        run: |
+          APK="$(find lab-apk -name '*.apk' -type f | head -n 1)"
+          test -n "$APK"
+          adb install -r "$APK"
+
+      - name: Run linker and FD ownership smoke
+        run: |
+          adb logcat -c
+
+          adb shell am start -W             -n org.soberania.app.wireguardlab/org.soberania.app.transport.wireguard.lab.WireGuardLabSmokeActivity
+
+          sleep 3
+
+          adb logcat -d -s SoberaniaWgSmoke:I '*:S' | tee wireguard-smoke.log
+
+          grep "SMOKE_NATIVE_AVAILABLE" wireguard-smoke.log
+          grep "SMOKE_FD_OWNERSHIP" wireguard-smoke.log
+          grep "SOBERANIA_WG_SMOKE_OK" wireguard-smoke.log
+          grep "v0.0.0-20250521234502-f333402bd9cb" wireguard-smoke.log
