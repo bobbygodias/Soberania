@@ -1,5 +1,7 @@
 package org.soberania.app.transport.wireguard
 
+import android.os.ParcelFileDescriptor
+
 /**
  * Implementação sentinela para builds onde o motor nativo WireGuard ainda
  * não foi empacotado.
@@ -9,11 +11,24 @@ package org.soberania.app.transport.wireguard
  */
 object UnavailableWireGuardEngine : WireGuardNativeEngine {
 
+    override fun isAvailable(): Boolean = false
+
     override fun turnOn(
         interfaceName: String,
         tunFd: Int,
         userspaceConfig: String
-    ): Int = UNAVAILABLE
+    ): Int {
+        /*
+         * O backend não deve chegar aqui porque isAvailable() é false.
+         * Ainda assim cumprimos o contrato de ownership: se alguém transferiu
+         * um FD para esta implementação, ele é fechado aqui.
+         */
+        runCatching {
+            ParcelFileDescriptor.adoptFd(tunFd).close()
+        }
+
+        return UNAVAILABLE
+    }
 
     override fun turnOff(handle: Int) = Unit
 
