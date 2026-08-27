@@ -10,7 +10,20 @@ package org.soberania.app.transport.wireguard
 interface WireGuardNativeEngine {
 
     /**
+     * Indica se a implementação nativa necessária está carregada e pronta
+     * para receber ownership de um FD.
+     *
+     * O backend consulta isso ANTES de detachRawFd(), evitando perder ownership
+     * de uma duplicata quando a biblioteca nem sequer está disponível.
+     */
+    fun isAvailable(): Boolean
+
+    /**
      * Inicia um dispositivo WireGuard sobre uma TUN já criada pelo Soberania.
+     *
+     * Ownership:
+     * ao entrar neste método, a implementação passa a ser responsável por
+     * fechar tunFd em QUALQUER resultado — sucesso, código negativo ou exceção.
      *
      * @param interfaceName nome lógico da interface
      * @param tunFd FD bruto cuja ownership foi transferida ao motor nativo
