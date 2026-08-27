@@ -2,18 +2,24 @@ package org.soberania.app.packet
 
 import org.soberania.app.transport.TransportBackend
 import org.soberania.app.transport.TransportKind
+import org.soberania.app.transport.TransportRuntime
 
 /**
  * Orquestra o caminho de dados entre a TUN e o backend escolhido.
  *
- * Ainda não encaminha pacotes no M0. Este contrato existe para impedir que
- * detalhes de WireGuard, tun2socks ou Arti vazem para o VpnService.
+ * PACKET_TUNNEL:
+ * o router transfere uma duplicata com ownership explícito ao backend e sai
+ * do caminho de dados.
+ *
+ * STREAM_PROXY:
+ * uma StreamBridge separada deverá consumir a TUN e alimentar o backend.
  */
 interface PacketRouter {
 
     fun attach(
         tun: TunHandle,
-        backend: TransportBackend
+        backend: TransportBackend,
+        runtime: TransportRuntime
     ): PacketRouterState
 
     fun detach()
