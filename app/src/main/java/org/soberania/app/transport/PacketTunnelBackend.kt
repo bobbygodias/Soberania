@@ -1,9 +1,9 @@
 package org.soberania.app.transport
 
-import org.soberania.app.packet.OwnedTunDescriptor
+import org.soberania.app.packet.OwnedTun
 
 /**
- * Backend que consome diretamente uma TUN.
+ * Backend que consome diretamente uma duplicata da TUN.
  *
  * Ownership:
  * ao entrar em start(), o backend recebe ownership de 'tun' e deve liberar a
@@ -12,7 +12,7 @@ import org.soberania.app.packet.OwnedTunDescriptor
 interface PacketTunnelBackend : TransportBackend {
 
     fun start(
-        tun: OwnedTunDescriptor,
+        tun: OwnedTun,
         runtime: TransportRuntime
     ): TransportState
 }
