@@ -47,6 +47,9 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
+      - name: Run JVM unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
       - name: Compile debug APK
         run: gradle --no-daemon :app:assembleDebug
 
