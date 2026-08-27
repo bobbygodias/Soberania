@@ -65,8 +65,8 @@ jobs:
       - name: Stage JNI libraries for WireGuard LAB
         run: bash scripts/stage-wireguard-lab-arm64.sh
 
-      - name: Run WireGuard LAB JVM unit tests
-        run: gradle --no-daemon :app:testWireguardLabUnitTest
+      - name: Run backend JVM unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
 
       - name: Compile WireGuard LAB APK
         run: gradle --no-daemon :app:assembleWireguardLab
