@@ -223,6 +223,41 @@ Estado atual:
 
 O primeiro build falhou porque o projeto ainda aplicava `org.jetbrains.kotlin.android`. AGP 9 usa Kotlin integrado; o plugin e `kotlinOptions.jvmTarget` foram removidos. O build seguinte passou.
 
+## WireGuard nativo isolado — estado atual
+
+Criado em `native/wireguard/`:
+
+- `versions.mk`;
+- `go.mod`;
+- `go.sum`;
+- `Makefile`;
+- `adapter/main.go`;
+- `jni/soberania_wireguard_jni.c`.
+
+Também existe `JniWireGuardNativeEngine.kt`, mas a biblioteca nativa ainda não está conectada ao `app/build.gradle.kts`.
+
+Inputs congelados para o laboratório:
+
+- Go 1.24.3;
+- SHA-256 do tarball Linux amd64 da toolchain registrado em `versions.mk`;
+- wireguard-go `v0.0.0-20250521234502-f333402bd9cb`;
+- NDK `28.2.13676358`;
+- Android API nativa mínima 26.
+
+O workflow `.github/workflows/wireguard-native-ci.yml` compilou com sucesso para `arm64-v8a`.
+
+Validações aprovadas:
+
+- `go mod verify`;
+- build Go `c-shared`;
+- build/link do JNI shim;
+- ELF aarch64 válido;
+- dependência dinâmica do JNI shim para `libsoberania-wireguard-go.so` confirmada.
+
+Artefato de laboratório do workflow: `soberania-wireguard-native-arm64-lab`.
+
+O módulo permanece **isolado do APK** até o M0 ser validado em dispositivo físico.
+
 ## Browser Shield planejado
 
 Objetivos:
@@ -273,15 +308,16 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 1. Instalar o APK M0 em dispositivo físico e confirmar autorização `VpnService`.
 2. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
 3. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
-4. Criar adaptador Go/JNI mínimo para `wireguard-go` upstream.
-5. Fixar versão/commit do motor e toolchain no build reproduzível.
-6. Testar `protectSocket()` antes de qualquer rota default.
-7. Testar peer WireGuard de laboratório sem rota default global.
-8. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-9. Só depois habilitar rotas default.
-10. Posteriormente integrar Arti/Rust/JNI.
-11. Depois Browser Shield.
-12. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
+4. Validar no aparelho que o M0 pode iniciar/parar repetidamente sem afetar a rede comum.
+5. Criar testes específicos de ownership do FD para a ponte nativa.
+6. Empacotar temporariamente o adaptador WireGuard apenas em uma variante de laboratório.
+7. Testar `protectSocket()` antes de qualquer rota default.
+8. Testar peer WireGuard de laboratório sem rota default global.
+9. Escolher e auditar a ponte TUN → stream para o caminho Onion.
+10. Só depois habilitar rotas default.
+11. Posteriormente integrar Arti/Rust/JNI.
+12. Depois Browser Shield.
+13. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
 
 ## Questões ainda abertas
 
