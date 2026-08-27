@@ -9,22 +9,25 @@ import android.net.VpnService
 import android.os.Build
 import org.soberania.app.MainActivity
 import org.soberania.app.R
+import org.soberania.app.packet.PacketRouterState
 import org.soberania.app.packet.TunHandle
-import org.soberania.app.packet.lab.TunLabProbe
+import org.soberania.app.packet.lab.LabPacketRouter
+import org.soberania.app.transport.TransportState
+import org.soberania.app.transport.lab.LabPacketBackend
 
 class SoberaniaVpnService : VpnService() {
 
     /**
      * O serviço é o dono do descritor original da TUN.
-     * Outros componentes devem receber apenas duplicatas via TunHandle.
+     * Outros componentes recebem apenas duplicatas via TunHandle.
      */
     private var tunHandle: TunHandle? = null
 
     /**
-     * Sonda exclusivamente de laboratório M0.
-     * Lê somente uma duplicata da TUN e não encaminha tráfego.
+     * M0 somente: prova TUN -> PacketRouter -> TransportBackend sem rede real.
      */
-    private val labProbe = TunLabProbe()
+    private val labRouter = LabPacketRouter()
+    private val labBackend = LabPacketBackend()
 
     override fun onCreate() {
         super.onCreate()
@@ -61,10 +64,6 @@ class SoberaniaVpnService : VpnService() {
          * A full 0.0.0.0/0 or ::/0 route without a real packet-forwarding
          * transport would black-hole the user's network while looking like a
          * working privacy product.
-         *
-         * We create a TUN interface and route only documentation/test ranges.
-         * This proves the Android VpnService lifecycle without pretending that
-         * traffic is protected before the transport engine exists.
          */
         val descriptor = Builder()
             .setSession(getString(R.string.app_name))
@@ -76,15 +75,35 @@ class SoberaniaVpnService : VpnService() {
             .establish()
 
         tunHandle = descriptor?.let(::TunHandle)
-        isRunning = tunHandle != null
 
-        if (!isRunning) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+        val tun = tunHandle
+        if (tun == null) {
+            failStart()
             return
         }
 
-        tunHandle?.let { labProbe.start(it) }
+        val backendState = labBackend.start()
+        if (backendState !is TransportState.Ready) {
+            failStart()
+            return
+        }
+
+        val routerState = labRouter.attach(
+            tun = tun,
+            backend = labBackend
+        )
+
+        isRunning = routerState is PacketRouterState.Attached
+
+        if (!isRunning) {
+            failStart()
+        }
+    }
+
+    private fun failStart() {
+        closeTun()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun stopTunnel() {
@@ -103,10 +122,13 @@ class SoberaniaVpnService : VpnService() {
     private fun closeTun() {
         isRunning = false
 
-        // Consumidores fecham primeiro suas duplicatas.
-        runCatching { labProbe.close() }
+        // Ordem de teardown é intencional:
+        // 1. consumidor da duplicata;
+        // 2. backend;
+        // 3. descritor TUN original.
+        runCatching { labRouter.close() }
+        runCatching { labBackend.stop() }
 
-        // O serviço fecha por último o descritor TUN original.
         runCatching { tunHandle?.close() }
         tunHandle = null
     }
@@ -124,7 +146,7 @@ class SoberaniaVpnService : VpnService() {
             Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle("Soberania — M0")
-                .setContentText("Túnel de laboratório ativo; tráfego real ainda não está protegido.")
+                .setContentText("PacketRouter de laboratório ativo; tráfego real ainda não está protegido.")
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
                 .build()
@@ -133,7 +155,7 @@ class SoberaniaVpnService : VpnService() {
             Notification.Builder(this)
                 .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle("Soberania — M0")
-                .setContentText("Túnel de laboratório ativo; tráfego real ainda não está protegido.")
+                .setContentText("PacketRouter de laboratório ativo; tráfego real ainda não está protegido.")
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
                 .build()
