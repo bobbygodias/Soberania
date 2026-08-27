@@ -4,7 +4,7 @@
 
 **Isolado. Ainda não ligado ao módulo Android `app`.**
 
-Este diretório prepara o backend userspace do Nível 1 sem alterar o APK M0 já validado pelo CI.
+O adaptador já compila em CI para **arm64-v8a**, incluindo o shared object Go e o JNI shim. Ele continua deliberadamente fora do APK M0.
 
 ## Objetivo
 
@@ -52,12 +52,25 @@ Se `tun.CreateUnmonitoredTUNFromFD()` falhar, o adaptador fecha explicitamente o
 
 Depois que a TUN userspace é criada com sucesso, o objeto `tun.Device` passa a possuir o descritor e seu fechamento ocorre via `device.Close()`.
 
+## Build de laboratório validado
+
+Workflow: `.github/workflows/wireguard-native-ci.yml`
+
+Validado:
+
+- Go 1.24.3;
+- NDK 28.2.13676358;
+- `go mod verify`;
+- wireguard-go fixado;
+- `-buildmode=c-shared`;
+- JNI shim linkado;
+- ELF arm64-v8a válido.
+
 ## Ainda não fazer
 
 Não adicionar este módulo a `app/build.gradle.kts` antes de:
 
 1. validar o APK M0 em dispositivo físico;
-2. gerar `go.sum` reproduzivelmente;
-3. compilar este módulo isoladamente no CI;
-4. revisar símbolos JNI/ABIs;
-5. adicionar testes de ownership de FD.
+2. adicionar testes de ownership de FD;
+3. revisar empacotamento das duas bibliotecas compartilhadas;
+4. criar uma variante de laboratório que não possa ser confundida com release protegida.
