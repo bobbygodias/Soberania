@@ -17,8 +17,103 @@ import (
     "golang.zx2c4.com/wireguard/tun"
 )
 
+const (
+    socketInvalidHandle     = -1001
+    socketUnsupportedBind   = -1002
+    socketFamilyUnavailable = -1003
+    socketLookupError       = -1004
+)
+
+/*
+ * trackedBind não altera o transporte WireGuard.
+ * Ele apenas registra quais famílias o StdNetBind conseguiu abrir para que
+ * um socket ausente não seja confundido com erro de lookup no limite JNI.
+ */
+type trackedBind struct {
+    conn.Bind
+
+    mu    sync.RWMutex
+    hasV4 bool
+    hasV6 bool
+}
+
+func newTrackedBind() *trackedBind {
+    return &trackedBind{
+        Bind: conn.NewStdNetBind(),
+    }
+}
+
+func (b *trackedBind) Open(port uint16) ([]conn.ReceiveFunc, uint16, error) {
+    receive, actualPort, err := b.Bind.Open(port)
+
+    b.mu.Lock()
+    b.hasV4 = false
+    b.hasV6 = false
+
+    if err == nil {
+        for _, fn := range receive {
+            switch fn.PrettyName() {
+            case "v4":
+                b.hasV4 = true
+            case "v6":
+                b.hasV6 = true
+            }
+        }
+    }
+    b.mu.Unlock()
+
+    return receive, actualPort, err
+}
+
+func (b *trackedBind) Close() error {
+    err := b.Bind.Close()
+
+    b.mu.Lock()
+    b.hasV4 = false
+    b.hasV6 = false
+    b.mu.Unlock()
+
+    return err
+}
+
+func (b *trackedBind) socketFD(ipv6 bool) int {
+    b.mu.RLock()
+    familyOpen := b.hasV4
+    if ipv6 {
+        familyOpen = b.hasV6
+    }
+    b.mu.RUnlock()
+
+    if !familyOpen {
+        return socketFamilyUnavailable
+    }
+
+    peek, ok := b.Bind.(conn.PeekLookAtSocketFd)
+    if !ok {
+        return socketUnsupportedBind
+    }
+
+    var (
+        fd  int
+        err error
+    )
+
+    if ipv6 {
+        fd, err = peek.PeekLookAtSocketFd6()
+    } else {
+        fd, err = peek.PeekLookAtSocketFd4()
+    }
+
+    if err != nil || fd < 0 {
+        return socketLookupError
+    }
+
+    return fd
+}
+
 type runningTunnel struct {
     device *device.Device
+    bind   *trackedBind
 }
 
 var registry = struct {
@@ -64,9 +159,11 @@ func soberaniaWgTurnOn(
         "Soberania/WireGuard",
     )
 
+    bind := newTrackedBind()
+
     wgDevice := device.NewDevice(
         tunDevice,
-        conn.NewStdNetBind(),
+        bind,
         logger,
     )
 
@@ -82,7 +179,7 @@ func soberaniaWgTurnOn(
         return -4
     }
 
-    handle := registerDevice(wgDevice)
+    handle := registerDevice(wgDevice, bind)
     if handle < 0 {
         wgDevice.Close()
         return -5
@@ -109,42 +206,22 @@ func soberaniaWgTurnOff(handle C.int) {
 
 //export soberaniaWgSocketV4
 func soberaniaWgSocketV4(handle C.int) C.int {
-    dev := lookupDevice(int32(handle))
-    if dev == nil {
-        return -1
-    }
-
-    bind, ok := dev.Bind().(conn.PeekLookAtSocketFd)
+    tunnel, ok := lookupTunnel(int32(handle))
     if !ok {
-        return -1
+        return C.int(socketInvalidHandle)
     }
 
-    fd, err := bind.PeekLookAtSocketFd4()
-    if err != nil {
-        return -1
-    }
-
-    return C.int(fd)
+    return C.int(tunnel.bind.socketFD(false))
 }
 
 //export soberaniaWgSocketV6
 func soberaniaWgSocketV6(handle C.int) C.int {
-    dev := lookupDevice(int32(handle))
-    if dev == nil {
-        return -1
-    }
-
-    bind, ok := dev.Bind().(conn.PeekLookAtSocketFd)
+    tunnel, ok := lookupTunnel(int32(handle))
     if !ok {
-        return -1
+        return C.int(socketInvalidHandle)
     }
 
-    fd, err := bind.PeekLookAtSocketFd6()
-    if err != nil {
-        return -1
-    }
-
-    return C.int(fd)
+    return C.int(tunnel.bind.socketFD(true))
 }
 
 //export soberaniaWgVersion
@@ -163,23 +240,22 @@ func soberaniaWgVersion() *C.char {
     return C.CString("unknown")
 }
 
-func lookupDevice(handle int32) *device.Device {
+func lookupTunnel(handle int32) (runningTunnel, bool) {
     registry.Lock()
     tunnel, ok := registry.tunnels[handle]
     registry.Unlock()
 
-    if !ok {
-        return nil
-    }
-
-    return tunnel.device
+    return tunnel, ok
 }
 
 /*
  * Aloca E registra o handle sob o mesmo lock.
  * Isso evita que dois starts concorrentes recebam o mesmo número.
  */
-func registerDevice(wgDevice *device.Device) int32 {
+func registerDevice(
+    wgDevice *device.Device,
+    bind *trackedBind,
+) int32 {
     registry.Lock()
     defer registry.Unlock()
 
@@ -203,6 +279,7 @@ func registerDevice(wgDevice *device.Device) int32 {
 
         registry.tunnels[candidate] = runningTunnel{
             device: wgDevice,
+            bind:   bind,
         }
 
         return candidate
