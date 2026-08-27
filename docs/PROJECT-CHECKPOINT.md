@@ -197,7 +197,7 @@ e um `TransportRuntime` restrito que expõe apenas `protectSocket(fd)`.
 
 A direção de integração foi refinada: criar um adaptador Go/JNI mínimo do Soberania que importe `wireguard-go` upstream, em vez de usar `GoBackend` ou manter um fork grande.
 
-`WireGuardNativeEngine` e `WireGuardPacketBackend` já existem como fronteira Kotlin, mas o motor nativo ainda não está empacotado.
+`WireGuardNativeEngine` e `WireGuardPacketBackend` já existem como fronteira Kotlin. O motor nativo continua fora do APK M0 normal, mas agora é empacotado exclusivamente na variante `wireguardLab`.
 
 Não usar reflexão, hacks de FD ou segundo VpnService concorrente.
 
@@ -218,8 +218,10 @@ Estado atual:
 - Gradle 9.5.0;
 - AGP 9.3.0;
 - Kotlin integrado do AGP 9;
+- `:app:testDebugUnitTest` passou com sucesso;
 - `:app:assembleDebug` passou com sucesso;
-- artefato `soberania-m0-debug` é gerado pelo workflow.
+- artefato `soberania-m0-debug` é gerado pelo workflow;
+- os testes JVM cobrem ownership/fail-closed do `WireGuardPacketBackend`.
 
 O primeiro build falhou porque o projeto ainda aplicava `org.jetbrains.kotlin.android`. AGP 9 usa Kotlin integrado; o plugin e `kotlinOptions.jvmTarget` foram removidos. O build seguinte passou.
 
@@ -234,7 +236,7 @@ Criado em `native/wireguard/`:
 - `adapter/main.go`;
 - `jni/soberania_wireguard_jni.c`.
 
-Também existe `JniWireGuardNativeEngine.kt`, mas a biblioteca nativa ainda não está conectada ao `app/build.gradle.kts`.
+Também existe `JniWireGuardNativeEngine.kt`.
 
 Inputs congelados para o laboratório:
 
@@ -244,7 +246,7 @@ Inputs congelados para o laboratório:
 - NDK `28.2.13676358`;
 - Android API nativa mínima 26.
 
-O workflow `.github/workflows/wireguard-native-ci.yml` compilou com sucesso para `arm64-v8a`.
+O workflow `.github/workflows/wireguard-native-ci.yml` compila o módulo nativo isolado para `arm64-v8a`.
 
 Validações aprovadas:
 
@@ -254,9 +256,71 @@ Validações aprovadas:
 - ELF aarch64 válido;
 - dependência dinâmica do JNI shim para `libsoberania-wireguard-go.so` confirmada.
 
-Artefato de laboratório do workflow: `soberania-wireguard-native-arm64-lab`.
+### Variante Android WireGuard LAB
 
-O módulo permanece **isolado do APK** até o M0 ser validado em dispositivo físico.
+Foi criada uma variante separada:
+
+```text
+M0 normal
+└── applicationId org.soberania.app
+    └── sem .so WireGuard empacotada
+
+wireguardLab
+└── applicationId org.soberania.app.wireguardlab
+    └── arm64-v8a
+        ├── libsoberania-wg.so
+        └── libsoberania-wireguard-go.so
+```
+
+O build type `wireguardLab` pode coexistir com o M0 normal no mesmo aparelho.
+
+A UI contém diagnóstico passivo **“Verificar motor WireGuard nativo”**. Esse diagnóstico somente:
+
+- tenta carregar a biblioteca JNI;
+- consulta disponibilidade;
+- consulta versão upstream quando disponível.
+
+Ele **não**:
+
+- cria peer WireGuard;
+- entrega TUN ao motor;
+- muda rota;
+- muda DNS;
+- ativa proteção real.
+
+Workflow: `.github/workflows/android-wireguard-lab-ci.yml`.
+
+Pipeline aprovado:
+
+1. compila WireGuard arm64;
+2. faz staging das duas bibliotecas;
+3. executa os testes JVM compartilhados;
+4. executa `:app:assembleWireguardLab`;
+5. abre o APK e confirma as duas bibliotecas em `lib/arm64-v8a/`;
+6. publica o artefato `soberania-wireguard-lab-arm64`.
+
+O APK WireGuard LAB foi produzido com sucesso. **Ainda falta validar no aparelho se o linker Android consegue carregar JNI + Go e retornar a versão.**
+
+### Ownership testável
+
+Foi introduzida a interface pura `OwnedTun`.
+
+`OwnedTunDescriptor` é a implementação Android. Isso permite testar no JVM o contrato do backend sem fingir um `ParcelFileDescriptor` Android.
+
+Testes atuais verificam:
+
+- motor indisponível fecha a duplicata antes de detach;
+- falha de `turnOn()` não devolve ownership ao Kotlin;
+- falha de `protectSocket()` derruba o motor;
+- lifecycle normal chega a `Ready` e `stop()` chama `turnOff()` exatamente uma vez.
+
+Esses testes não substituem o teste real de FD/JNI/kernel no Android.
+
+### Chaves WireGuard
+
+`WireGuard/wgctrl-go` foi verificado como MIT e `wgtypes` oferece APIs públicas como `GeneratePrivateKey()`, `ParseKey()` e `PublicKey()`.
+
+Ele permanece **candidato**, ainda não dependência do build. Antes de adicioná-lo, fixar versão/commit e revisar a árvore de módulos.
 
 ## Browser Shield planejado
 
@@ -309,15 +373,16 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 2. Confirmar que `LabPacketBackend` observa pacotes IPv4/IPv6 reservados.
 3. Confirmar repetidamente lifecycle e ownership original -> duplicata -> backend.
 4. Validar no aparelho que o M0 pode iniciar/parar repetidamente sem afetar a rede comum.
-5. Criar testes específicos de ownership do FD para a ponte nativa.
-6. Empacotar temporariamente o adaptador WireGuard apenas em uma variante de laboratório.
-7. Testar `protectSocket()` antes de qualquer rota default.
-8. Testar peer WireGuard de laboratório sem rota default global.
-9. Escolher e auditar a ponte TUN → stream para o caminho Onion.
-10. Só depois habilitar rotas default.
-11. Posteriormente integrar Arti/Rust/JNI.
-12. Depois Browser Shield.
-13. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
+5. Instalar a variante `wireguardLab` e confirmar que o diagnóstico passivo carrega JNI + Go e retorna versão.
+6. Criar teste Android real de ownership do FD na ponte nativa.
+7. Endurecer a semântica de retorno dos sockets nativos para distinguir “socket ainda não aberto” de erro real.
+8. Testar `protectSocket()` antes de qualquer rota default.
+9. Testar peer WireGuard de laboratório sem rota default global.
+10. Escolher e auditar a ponte TUN → stream para o caminho Onion.
+11. Só depois habilitar rotas default.
+12. Posteriormente integrar Arti/Rust/JNI.
+13. Depois Browser Shield.
+14. Proteção Máxima somente quando os componentes que ela exige estiverem realmente implementados.
 
 ## Questões ainda abertas
 
