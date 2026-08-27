@@ -14,6 +14,7 @@ import android.widget.Space
 import android.widget.TextView
 import org.soberania.app.packet.lab.TunLabCounters
 import org.soberania.app.packet.lab.TunLabPacketSender
+import org.soberania.app.transport.wireguard.JniWireGuardNativeEngine
 import org.soberania.app.vpn.SoberaniaVpnService
 
 class MainActivity : Activity() {
@@ -21,6 +22,8 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var action: Button
     private lateinit var labTest: Button
+    private lateinit var wireGuardNativeStatus: TextView
+    private lateinit var wireGuardNativeCheck: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,6 +104,20 @@ class MainActivity : Activity() {
             }
         }
 
+        wireGuardNativeStatus = TextView(this).apply {
+            text = getString(R.string.wireguard_native_not_checked)
+            textSize = 14f
+            gravity = Gravity.CENTER
+        }
+
+        wireGuardNativeCheck = Button(this).apply {
+            text = getString(R.string.check_wireguard_native)
+
+            setOnClickListener {
+                checkWireGuardNativeEngine()
+            }
+        }
+
         root.addView(title)
         root.addView(space(20))
         root.addView(motto)
@@ -110,8 +127,31 @@ class MainActivity : Activity() {
         root.addView(action)
         root.addView(space(16))
         root.addView(labTest)
+        root.addView(space(32))
+        root.addView(wireGuardNativeStatus)
+        root.addView(space(12))
+        root.addView(wireGuardNativeCheck)
 
         return root
+    }
+
+    private fun checkWireGuardNativeEngine() {
+        /*
+         * Diagnóstico passivo:
+         * apenas tenta carregar a biblioteca e consultar a versão.
+         * Não cria TUN, não abre peer, não altera rota e não toca em DNS.
+         */
+        val engine = JniWireGuardNativeEngine()
+
+        wireGuardNativeStatus.text = if (!engine.isAvailable()) {
+            getString(R.string.wireguard_native_unavailable)
+        } else {
+            val version = engine.version() ?: getString(R.string.wireguard_native_unknown_version)
+            getString(
+                R.string.wireguard_native_available,
+                version
+            )
+        }
     }
 
     private fun space(dp: Int): Space {
