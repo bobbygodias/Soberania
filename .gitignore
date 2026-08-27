@@ -13,6 +13,9 @@ captures/
 .externalNativeBuild/
 .cxx/
 
+# Generated native laboratory staging
+app/src/wireguardLab/jniLibs/
+
 # Signing
 *.jks
 *.keystore
