@@ -78,21 +78,23 @@ class WireGuardPacketBackend(
 
         handle = newHandle
 
-        val protectedV4 = protectIfPresent(
-            fd = engine.socketV4(newHandle),
-            runtime = runtime
-        )
+        val socketV4 = engine.socketV4(newHandle)
+        val socketV6 = engine.socketV6(newHandle)
 
-        val protectedV6 = protectIfPresent(
-            fd = engine.socketV6(newHandle),
-            runtime = runtime
-        )
+        if (socketV4 < 0 || socketV6 < 0) {
+            stopNativeHandle(newHandle)
+            return fail(
+                "Socket WireGuard indisponível: " +
+                    "IPv4=${describeSocketResult(socketV4)}, " +
+                    "IPv6=${describeSocketResult(socketV6)}"
+            )
+        }
+
+        val protectedV4 = runtime.protectSocket(socketV4)
+        val protectedV6 = runtime.protectSocket(socketV6)
 
         if (!protectedV4 || !protectedV6) {
-            runCatching {
-                engine.turnOff(newHandle)
-            }
-            handle = NO_HANDLE
+            stopNativeHandle(newHandle)
             return fail("Falha ao proteger sockets do transporte WireGuard")
         }
 
@@ -120,15 +122,19 @@ class WireGuardPacketBackend(
 
     override fun state(): TransportState = currentState
 
-    private fun protectIfPresent(
-        fd: Int,
-        runtime: TransportRuntime
-    ): Boolean {
-        if (fd < 0) {
-            return true
+    private fun stopNativeHandle(nativeHandle: Int) {
+        runCatching {
+            engine.turnOff(nativeHandle)
         }
+        handle = NO_HANDLE
+    }
 
-        return runtime.protectSocket(fd)
+    private fun describeSocketResult(value: Int): String = when (value) {
+        WireGuardNativeEngine.SOCKET_INVALID_HANDLE -> "handle-inválido"
+        WireGuardNativeEngine.SOCKET_UNSUPPORTED_BIND -> "bind-sem-inspeção"
+        WireGuardNativeEngine.SOCKET_FAMILY_UNAVAILABLE -> "família-indisponível"
+        WireGuardNativeEngine.SOCKET_LOOKUP_ERROR -> "erro-de-lookup"
+        else -> if (value >= 0) "fd-$value" else "erro-$value"
     }
 
     private fun fail(reason: String): TransportState {
