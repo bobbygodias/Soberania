@@ -19,9 +19,18 @@ permissions:
   contents: read
 
 jobs:
-  arm64:
-    name: Build arm64-v8a adapter
+  native:
+    name: Build ${{ matrix.abi }} adapter
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: arm64
+            abi: arm64-v8a
+          - target: x86_64
+            abi: x86_64
 
     steps:
       - name: Checkout
@@ -43,23 +52,23 @@ jobs:
         working-directory: native/wireguard
         run: go mod verify
 
-      - name: Build arm64-v8a
+      - name: Build ${{ matrix.abi }}
         working-directory: native/wireguard
-        run: make build-arm64
+        run: make build-${{ matrix.target }}
 
       - name: Inspect ELF
         working-directory: native/wireguard
         run: |
-          file build/arm64-v8a/libsoberania-wireguard-go.so
-          file build/arm64-v8a/libsoberania-wg.so
-          readelf -d build/arm64-v8a/libsoberania-wg.so | grep NEEDED
+          file build/${{ matrix.abi }}/libsoberania-wireguard-go.so
+          file build/${{ matrix.abi }}/libsoberania-wg.so
+          readelf -d build/${{ matrix.abi }}/libsoberania-wg.so | grep NEEDED
 
       - name: Upload native laboratory artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: soberania-wireguard-native-arm64-lab
+          name: soberania-wireguard-native-${{ matrix.abi }}-lab
           path: |
-            native/wireguard/build/arm64-v8a/libsoberania-wireguard-go.so
-            native/wireguard/build/arm64-v8a/libsoberania-wireguard-go.h
-            native/wireguard/build/arm64-v8a/libsoberania-wg.so
+            native/wireguard/build/${{ matrix.abi }}/libsoberania-wireguard-go.so
+            native/wireguard/build/${{ matrix.abi }}/libsoberania-wireguard-go.h
+            native/wireguard/build/${{ matrix.abi }}/libsoberania-wg.so
           if-no-files-found: error
