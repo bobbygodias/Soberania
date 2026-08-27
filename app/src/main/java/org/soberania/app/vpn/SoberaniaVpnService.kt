@@ -23,14 +23,14 @@ class SoberaniaVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> stopTunnel()
-            else -> startLabTunnel()
+            ACTION_START -> startLabTunnel()
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        stopTunnel()
+        closeTun()
         super.onDestroy()
     }
 
@@ -73,10 +73,7 @@ class SoberaniaVpnService : VpnService() {
     }
 
     private fun stopTunnel() {
-        isRunning = false
-
-        runCatching { tunInterface?.close() }
-        tunInterface = null
+        closeTun()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -86,6 +83,12 @@ class SoberaniaVpnService : VpnService() {
         }
 
         stopSelf()
+    }
+
+    private fun closeTun() {
+        isRunning = false
+        runCatching { tunInterface?.close() }
+        tunInterface = null
     }
 
     private fun buildNotification(): Notification {
@@ -99,7 +102,7 @@ class SoberaniaVpnService : VpnService() {
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle("Soberania — M0")
                 .setContentText("Túnel de laboratório ativo; tráfego real ainda não está protegido.")
                 .setContentIntent(contentIntent)
@@ -108,7 +111,7 @@ class SoberaniaVpnService : VpnService() {
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(R.drawable.ic_shield)
                 .setContentTitle("Soberania — M0")
                 .setContentText("Túnel de laboratório ativo; tráfego real ainda não está protegido.")
                 .setContentIntent(contentIntent)
