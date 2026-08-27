@@ -76,6 +76,7 @@ Foi criado o contrato `WireGuardNativeEngine`.
 
 Ele expõe somente:
 
+- consultar se o motor nativo está disponível;
 - iniciar motor com TUN externa;
 - desligar motor;
 - obter sockets IPv4/IPv6;
@@ -100,13 +101,15 @@ Se um socket existente não puder ser protegido, o backend deve falhar e derruba
 
 `WireGuardPacketBackend` recebe um `OwnedTunDescriptor`.
 
+Antes de `detachRawFd()`, o backend exige `engine.isAvailable() == true`.
+
 Ao chamar `detachRawFd()`:
 
 - ownership passa ao motor nativo;
 - Kotlin deixa de poder fechar aquele FD;
-- o motor nativo deve assumir a responsabilidade de fechar o FD em sucesso ou falha.
+- o motor nativo deve assumir a responsabilidade de fechar o FD em **qualquer saída de `turnOn()`**: sucesso, código negativo ou exceção.
 
-Essa regra precisa ser testada especificamente na implementação JNI.
+A implementação sentinela indisponível também fecha qualquer FD que receba por engano. Essa regra precisa ser testada especificamente na implementação JNI real.
 
 ## O que NÃO fazer
 
