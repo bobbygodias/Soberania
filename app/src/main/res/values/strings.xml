@@ -9,4 +9,10 @@
     <string name="activate_lab">Criar túnel de laboratório</string>
     <string name="stop_lab">Encerrar túnel</string>
     <string name="send_lab_packet">Enviar pacotes de teste IPv4/IPv6</string>
+
+    <string name="check_wireguard_native">Verificar motor WireGuard nativo</string>
+    <string name="wireguard_native_not_checked">Motor WireGuard nativo: ainda não verificado.</string>
+    <string name="wireguard_native_unavailable">Motor WireGuard nativo: indisponível neste build. Nenhum túnel real foi iniciado.</string>
+    <string name="wireguard_native_available">Motor WireGuard nativo: disponível · upstream %1$s. Nenhum túnel real foi iniciado.</string>
+    <string name="wireguard_native_unknown_version">versão desconhecida</string>
 </resources>
