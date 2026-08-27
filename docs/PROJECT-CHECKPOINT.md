@@ -326,6 +326,79 @@ Esses testes não substituem o teste real de FD/JNI/kernel no Android.
 
 Ele permanece **candidato**, ainda não dependência do build. Antes de adicioná-lo, fixar versão/commit e revisar a árvore de módulos.
 
+## Android x86_64 native smoke — VALIDADO
+
+O workflow `.github/workflows/android-wireguard-lab-ci.yml` agora executa um segundo job em emulador Android x86_64 real.
+
+Fluxo comprovado:
+
+```text
+APK WireGuard LAB
+      │
+      ▼
+Android x86_64
+      │
+      ▼
+Android linker
+      │
+      ▼
+JNI + Go runtime
+      │
+      ▼
+wireguard-go pinado
+      │
+      ▼
+duplicata de FD Android
+      │
+      ▼
+turnOn() com FD deliberadamente não-TUN
+      │
+      ▼
+falha controlada -2
+      │
+      ├── duplicata fechada ✔
+      └── descritor original vivo ✔
+```
+
+Resultado registrado pelo CI:
+
+```text
+SMOKE_NATIVE_AVAILABLE
+version=v0.0.0-20250521234502-f333402bd9cb
+
+SMOKE_FD_OWNERSHIP
+before=true
+result=-2
+after=false
+originalAlive=true
+
+SOBERANIA_WG_SMOKE_OK
+version=v0.0.0-20250521234502-f333402bd9cb
+```
+
+Isso prova em Android, e não apenas no JVM:
+
+- carregamento da ABI x86_64;
+- JNI funcional;
+- Go runtime funcional;
+- versão upstream pinada;
+- transferência real de ownership de uma duplicata;
+- fechamento da duplicata pelo lado nativo em falha;
+- preservação do descritor original.
+
+O teste não cria `VpnService`, peer, rota ou DNS.
+
+### Robustez do CI do emulador
+
+Também foi endurecida a infraestrutura:
+
+- espera por ADB possui timeout;
+- falha de boot imprime `emulator.log`;
+- `ANDROID_AVD_HOME` é fixado no runtime do runner via `GITHUB_ENV`;
+- execuções LAB obsoletas são canceladas por `concurrency/cancel-in-progress`.
+
+A primeira tentativa revelou um erro de infraestrutura — o emulador procurava o AVD em diretório diferente daquele usado pelo `avdmanager`. Isso foi corrigido sem alterar código do produto.
+
 ## Browser Shield planejado
 
 Objetivos:
@@ -373,11 +446,10 @@ Este roadmap é independente do desenvolvimento do núcleo de privacidade.
 
 ## Próximos passos técnicos
 
-1. Criar teste Android real de ownership do FD na ponte nativa.
-2. Adicionar smoke test Android x86_64 de carga JNI + Go no CI.
-3. Ligar a TUN real ao `WireGuardPacketBackend` apenas em variante LAB.
-4. Testar `protectSocket()` fail-closed antes de qualquer rota default.
-5. Testar peer WireGuard de laboratório sem rota default global.
+1. Ligar uma TUN Android real ao motor WireGuard somente na variante LAB, ainda sem peer e sem rota default.
+2. Provar abertura dos sockets IPv4/IPv6 e `VpnService.protect()` fail-closed.
+3. Provar teardown: motor fecha a duplicata e a TUN original continua sob ownership do serviço.
+4. Só depois testar um peer WireGuard de laboratório sem rota default global.
 6. Provar ida/volta e teardown sem vazamento.
 7. Só então avaliar rotas reais IPv4/IPv6 e DNS pelo túnel.
 8. Escolher e auditar a ponte TUN → stream para o caminho Onion.
