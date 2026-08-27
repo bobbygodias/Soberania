@@ -1,6 +1,6 @@
 # Soberania
 
-> **“Porque soberania e liberdade jamais serão negociáveis.”**
+> **“Porque nossa soberania e liberdade jamais serão negociáveis.”**
 
 **Soberania** é uma plataforma open source de soberania digital para Android.
 
@@ -73,7 +73,7 @@ Veja [docs/TRANSPORTS.md](docs/TRANSPORTS.md).
 
 Integração opcional com navegador compatível para reduzir rastreamento por cookies, storage, trackers e fingerprinting.
 
-## Recurso opcional — Comunicação de Emergência
+## Recurso extra — Comunicação de Emergência
 
 Soberania também planeja um módulo **separado** de comunicação de voz via RoIP para gateways/refletores de rádio.
 
@@ -122,7 +122,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 
 Projeto em início de desenvolvimento. **Ainda não existe release estável.**
 
-O APK M0 e uma variante isolada `wireguardLab` já compilam automaticamente no GitHub Actions. A variante LAB empacota o motor WireGuard arm64 e faz apenas diagnóstico passivo de carga/versão; nenhuma das builds representa ainda proteção real de tráfego.
+O APK M0 e uma variante isolada `wireguardLab` está em testes. A variante LAB empacota o motor WireGuard arm64 e faz apenas diagnóstico passivo de carga/versão; nenhuma das builds representa ainda proteção real de tráfego.
 
 Não utilize versões de desenvolvimento para situações em que falhas de privacidade possam colocar alguém em risco.
 
@@ -133,4 +133,4 @@ Este projeto é software livre. Consulte [LICENSE](LICENSE).
 ---
 
 **Soberania**  
-*Porque soberania e liberdade jamais serão negociáveis.*
+*Porque nossa soberania e liberdade jamais serão negociáveis.*
