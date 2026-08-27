@@ -2,11 +2,14 @@
 
 ## Status
 
-**Arquitetura definida. Motor nativo ainda não integrado.**
+**Direção arquitetural escolhida. Motor nativo ainda não integrado.**
 
 ## Resultado da pesquisa upstream
 
-Foi inspecionado o código oficial atual do projeto `WireGuard/wireguard-android`.
+Foi inspecionado o código oficial atual dos projetos:
+
+- `WireGuard/wireguard-android`;
+- `WireGuard/wireguard-go`.
 
 O módulo Android oficial publica uma biblioteca embutível, mas o `GoBackend`:
 
@@ -27,24 +30,11 @@ wgGetConfig(...)
 wgVersion()
 ```
 
-Portanto, usar `GoBackend` diretamente faria o Soberania perder a propriedade de uma única TUN e criaria um segundo lifecycle de VPN.
+Portanto, usar `GoBackend` diretamente criaria um segundo lifecycle de VPN e violaria a decisão de manter uma única TUN sob controle do Soberania.
 
-## ABI nativa upstream
+## Decisão
 
-A camada `libwg-go` oficial expõe conceitualmente:
-
-```text
-wgTurnOn(interfaceName, tunFd, settings)
-wgTurnOff(handle)
-wgGetSocketV4(handle)
-wgGetSocketV6(handle)
-wgGetConfig(handle)
-wgVersion()
-```
-
-Isso encaixa diretamente na arquitetura do Soberania porque já possuímos a TUN.
-
-## Direção escolhida
+A direção escolhida é um **adaptador nativo mínimo do próprio Soberania**, sem copiar `GoBackend` e sem criar um fork grande do módulo Android.
 
 ```text
 SoberaniaVpnService
@@ -65,24 +55,53 @@ WireGuardPacketBackend
 WireGuardNativeEngine
        │
        ▼
+adaptador Go/JNI mínimo do Soberania
+       │
+       ▼
+golang.zx2c4.com/wireguard
+       │
+       ▼
 wireguard-go upstream
 ```
 
-O `GoBackend` oficial não será usado como controlador do túnel.
+## Por que essa direção
+
+Ela preserva:
+
+- uma única TUN;
+- um único `VpnService`;
+- ownership explícito;
+- `VpnService.protect()` para sockets do transporte;
+- criptografia/protocolo no código WireGuard upstream;
+- atualização do motor por versão/commit fixado;
+- ausência de reflection;
+- ausência de dependência de métodos JNI privados da classe `GoBackend`.
+
+## wireguard-go
+
+O projeto `WireGuard/wireguard-go` utiliza licença MIT.
+
+O build Android oficial de referência:
+
+- usa Go 1.24.3;
+- verifica o tarball da toolchain com SHA-256;
+- compila com `-buildmode c-shared`;
+- fixa a revisão do módulo `golang.zx2c4.com/wireguard` no `go.mod`.
+
+O Soberania deve adotar a mesma filosofia de pinning e verificação, sem necessariamente copiar o build upstream.
 
 ## Fronteira Kotlin/native
 
-Foi criado o contrato `WireGuardNativeEngine`.
+O contrato `WireGuardNativeEngine` expõe somente:
 
-Ele expõe somente:
+- `isAvailable()`;
+- `turnOn(interfaceName, tunFd, userspaceConfig)`;
+- `turnOff(handle)`;
+- `socketV4(handle)`;
+- `socketV6(handle)`;
+- `version()`.
 
-- consultar se o motor nativo está disponível;
-- iniciar motor com TUN externa;
-- desligar motor;
-- obter sockets IPv4/IPv6;
-- obter versão.
-
-Nenhuma API de criptografia proprietária é criada no Soberania.
+Nenhuma API criptográfica proprietária é criada no Soberania.
 
 ## Socket protection
 
@@ -95,74 +114,64 @@ wireguard-go
    └── socket IPv6 ──► VpnService.protect(fd)
 ```
 
-Se um socket existente não puder ser protegido, o backend deve falhar e derrubar o motor em vez de manter um túnel com risco de loop.
+Se um socket existente não puder ser protegido, o backend deve derrubar o motor e entrar em estado de falha.
 
 ## Ownership do FD
 
 `WireGuardPacketBackend` recebe um `OwnedTunDescriptor`.
 
-Antes de `detachRawFd()`, o backend exige `engine.isAvailable() == true`.
+Antes de transferir ownership:
 
-Ao chamar `detachRawFd()`:
+```text
+engine.isAvailable() == true
+```
 
-- ownership passa ao motor nativo;
-- Kotlin deixa de poder fechar aquele FD;
-- o motor nativo deve assumir a responsabilidade de fechar o FD em **qualquer saída de `turnOn()`**: sucesso, código negativo ou exceção.
+Depois de `detachRawFd()`:
 
-A implementação sentinela indisponível também fecha qualquer FD que receba por engano. Essa regra precisa ser testada especificamente na implementação JNI real.
+- Kotlin deixa de possuir o FD;
+- `turnOn()` passa a ser responsável pelo FD;
+- o adaptador nativo deve fechar o FD em sucesso, código negativo ou exceção;
+- o descritor TUN original permanece com `SoberaniaVpnService`.
+
+Essa regra é obrigatória e terá teste específico.
+
+## Chaves
+
+Não implementar geração/derivação de chaves WireGuard manualmente em Kotlin.
+
+Direção:
+
+- usar API criptográfica já existente no ecossistema WireGuard;
+- ou expor geração/derivação pelo adaptador Go usando biblioteca upstream apropriada;
+- nunca copiar pequenas rotinas criptográficas só por parecerem simples.
 
 ## O que NÃO fazer
 
 - não instanciar `GoBackend` como segundo VpnService;
-- não usar reflection para chamar os métodos privados de `GoBackend`;
-- não depender de nomes privados JNI da classe upstream;
-- não copiar código sem preservar licença e avisos;
+- não usar reflection para chamar métodos privados;
+- não depender dos nomes JNI privados de `GoBackend`;
 - não modificar primitivas criptográficas;
-- não criar protocolo derivado próprio;
-- não marcar Nível 1 como protegido enquanto o backend nativo não estiver funcional e testado.
+- não criar protocolo derivado;
+- não usar dependência dinâmica sem versão;
+- não marcar Nível 1 como protegido antes do caminho completo e dos testes anti-leak.
 
 ## Licenciamento
 
-Os arquivos atuais inspecionados do `wireguard-android`/`libwg-go` carregam licença Apache-2.0.
+- código autoral do Soberania: atualmente CC0 1.0, salvo indicação em contrário;
+- `wireguard-go`: MIT;
+- arquivos do adaptador Android upstream estudados: Apache-2.0.
 
-O repositório Soberania atualmente possui LICENSE CC0 1.0.
+A política está em `docs/LICENSING.md` e `THIRD_PARTY_NOTICES.md`.
 
-Antes de copiar/vendorizar qualquer código upstream, precisamos definir uma política de terceiros:
+## Próxima implementação
 
-```text
-código Soberania        -> licença principal do projeto
-código WireGuard        -> Apache-2.0 + avisos upstream
-outros componentes      -> licença original preservada
-```
-
-Uma dependência binária/Maven reduz cópia de código, mas a API pública atual não resolve a TUN externa. Portanto, a decisão de build/vendor ainda está aberta.
-
-## Próximo passo
-
-Comparar duas opções:
-
-### A — build próprio de libwg-go upstream
-
-Prós:
-- usa diretamente a ABI apropriada;
-- uma única TUN;
-- integração pequena;
-- sem reflection.
-
-Contras:
-- exige Go + NDK/CMake no build;
-- aumenta complexidade de build reproduzível;
-- exige manutenção e política clara de código de terceiros.
-
-### B — pequeno fork auditável do módulo tunnel upstream
-
-Prós:
-- segue estrutura oficial Android;
-- reutiliza pipeline de build já testado upstream.
-
-Contras:
-- precisamos carregar alterações;
-- aumenta custo de atualização;
-- risco de divergência do upstream.
-
-A decisão deve priorizar manutenção, reprodutibilidade e capacidade de acompanhar atualizações de segurança do WireGuard.
+1. criar módulo nativo isolado;
+2. fixar versões de Go e `wireguard-go`;
+3. criar adaptador Go mínimo;
+4. criar JNI mínimo para `WireGuardNativeEngine`;
+5. adicionar build NDK/Go reproduzível;
+6. compilar no CI para ABIs Android suportadas;
+7. testar ownership de FD;
+8. testar `protectSocket()`;
+9. só então testar um peer WireGuard de laboratório;
+10. ainda sem rota default até ida/volta e fail-closed estarem validados.
