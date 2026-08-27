@@ -73,6 +73,18 @@ Veja [docs/TRANSPORTS.md](docs/TRANSPORTS.md).
 
 Integração opcional com navegador compatível para reduzir rastreamento por cookies, storage, trackers e fingerprinting.
 
+## Recurso opcional — Comunicação de Emergência
+
+Soberania também planeja um módulo **separado** de comunicação de voz via RoIP para gateways/refletores de rádio.
+
+Ele não faz parte dos Níveis 1–4 e **não promete anonimato ou confidencialidade de rádio**. Redes de radioamador podem exigir ou divulgar indicativo, Radio ID e outros metadados.
+
+Um smartphone sem hardware RF apropriado não se transforma em transceptor VHF/UHF por software; o recurso depende de um caminho IP até um gateway/refletor ou de hardware externo compatível.
+
+Prioridade inicial: **M17 + Codec2**.
+
+Veja [docs/EMERGENCY-COMMS.md](docs/EMERGENCY-COMMS.md).
+
 ## O que Soberania não promete
 
 Soberania não pode tornar um dispositivo já comprometido magicamente seguro, apagar identificação feita pela rede celular, esconder a identidade que o próprio usuário fornece ao fazer login em um serviço, nem garantir anonimato absoluto contra um adversário capaz de observar todos os pontos relevantes de uma comunicação.
@@ -97,6 +109,7 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [Modelo de ameaça](docs/THREAT-MODEL.md)
 - [Transportes e integração Arti](docs/TRANSPORTS.md)
 - [Checkpoint do projeto](docs/PROJECT-CHECKPOINT.md)
+- [Comunicação de Emergência](docs/EMERGENCY-COMMS.md)
 - [M0 — Coração](docs/M0.md)
 - [Política de segurança](SECURITY.md)
 
