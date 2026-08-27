@@ -66,19 +66,22 @@ Android / Kotlin
 SoberaniaVpnService
       │
       ▼
-TUN / packet router
+TUN
       │
       ▼
-TransportBackend
+Packet Router
+      │
+      ▼
+Stream Bridge / tun2socks
+      │
+      ▼
+TransportBackend (STREAM_PROXY)
       │
       ▼
 JNI / FFI
       │
       ▼
-Rust
-      │
-      ▼
-Arti
+Rust / Arti
       │
       ▼
 Tor Network
@@ -106,9 +109,9 @@ Uma rede de anonimato real precisa também lidar com:
 
 Uma implementação experimental própria pode existir futuramente em laboratório, mas não deve substituir uma rede madura apenas por ser "nossa".
 
-## Paranoico
+## Nível 4 — Máxima
 
-Paranoico **não é o quarto transporte**.
+O Nível 4 **não é o quarto transporte**.
 
 É um perfil que combina:
 
@@ -132,7 +135,7 @@ zero logs persistentes
 Browser Shield quando compatível
 ```
 
-Assim, melhorar o modo Onion melhora automaticamente o núcleo do perfil Paranoico sem duplicar código.
+Assim, melhorar o modo Onion melhora automaticamente o núcleo da Proteção Máxima sem duplicar código.
 
 ## Estado real
 
@@ -152,7 +155,7 @@ A interface não pode marcar "protegido" antes de o backend informar que está e
 Antes de integrar Arti:
 
 1. finalizar M0 e provar o ciclo do VpnService;
-2. definir o caminho TUN -> packet router -> backend;
+2. definir o caminho TUN -> packet router -> backend de pacote OU stream bridge -> backend de stream;
 3. definir ownership do file descriptor TUN;
 4. criar testes de ida e volta;
 5. só então adicionar Rust/JNI e Arti.
