@@ -26,7 +26,7 @@ public class ShellUserService extends IControlService.Stub {
 
     @Override
     public String exec(String command) {
-        if (command == null || command.isBlank()) {
+        if (command == null || command.trim().isEmpty()) {
             return "Comando vazio.";
         }
 
@@ -61,7 +61,7 @@ public class ShellUserService extends IControlService.Stub {
             }
             drain.join(2500);
 
-            String output = capture.toString(StandardCharsets.UTF_8);
+            String output = new String(capture.toByteArray(), StandardCharsets.UTF_8);
             if (capture.size() >= MAX_CAPTURE) {
                 output += "\n[saída truncada em 128 KiB]";
             }
