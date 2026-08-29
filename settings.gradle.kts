@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Soberania"
 include(":app")
+include(":control")
