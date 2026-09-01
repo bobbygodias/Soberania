@@ -118,14 +118,6 @@ Promessas impossíveis não melhoram segurança. Transparência melhora.
 - [M0 — Coração](docs/M0.md)
 - [Política de segurança](SECURITY.md)
 
-## Ferramenta extra — Soberania Controle
-
-O repositório também contém o **Soberania Controle**, um APK separado baseado em **Shizuku** para expor controles locais normalmente acessíveis apenas pelo shell/ADB, sem exigir root.
-
-A primeira versão inclui diagnóstico do UID real do Shizuku, override de redimensionamento por aplicativo, tentativa de split screen entre dois apps, abertura explícita em tela cheia, controle de compatibilidade global, ajustes básicos de segundo plano, diagnóstico de DPM e um shell avançado limitado aos privilégios efetivos do backend.
-
-Veja [control/README.md](control/README.md).
-
 ## Estado atual
 
 Projeto em início de desenvolvimento. **Ainda não existe release estável.**
