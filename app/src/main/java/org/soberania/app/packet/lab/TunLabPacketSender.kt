@@ -14,17 +14,20 @@ object TunLabPacketSender {
 
     data class Result(
         val ipv4Attempted: Boolean,
-        val ipv6Attempted: Boolean
+        val ipv6Attempted: Boolean,
+        // Sucesso no envio pelo socket não comprova entrega na TUN.
+        val ipv4SocketSendSucceeded: Boolean,
+        val ipv6SocketSendSucceeded: Boolean
     )
 
     fun send(): Result {
-        sendUdp(
+        val ipv4Sent = sendUdp(
             host = "192.0.2.1",
             port = TEST_PORT,
             payload = "SOBERANIA-M0-IPV4".encodeToByteArray()
         )
 
-        sendUdp(
+        val ipv6Sent = sendUdp(
             host = "2001:db8::1",
             port = TEST_PORT,
             payload = "SOBERANIA-M0-IPV6".encodeToByteArray()
@@ -32,7 +35,9 @@ object TunLabPacketSender {
 
         return Result(
             ipv4Attempted = true,
-            ipv6Attempted = true
+            ipv6Attempted = true,
+            ipv4SocketSendSucceeded = ipv4Sent,
+            ipv6SocketSendSucceeded = ipv6Sent
         )
     }
 
@@ -40,8 +45,8 @@ object TunLabPacketSender {
         host: String,
         port: Int,
         payload: ByteArray
-    ) {
-        runCatching {
+    ): Boolean {
+        return runCatching {
             DatagramSocket().use { socket ->
                 val address = InetAddress.getByName(host)
                 val packet = DatagramPacket(
@@ -52,7 +57,7 @@ object TunLabPacketSender {
                 )
                 socket.send(packet)
             }
-        }
+        }.isSuccess
     }
 
     private const val TEST_PORT = 1701
