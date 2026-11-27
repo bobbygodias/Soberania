@@ -53,6 +53,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android API 36 and pinned NDK
         run: sdkmanager "platforms;android-36" "ndk;28.2.13676358"
@@ -106,6 +108,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install emulator and x86_64 system image
         run: |
